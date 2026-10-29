@@ -153,6 +153,7 @@ body{
 
 /* ---------- Footer ---------- */
 .footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap}
+.footer-left{display:flex;align-items:center;gap:12px}
 .restart{
   width:62px;height:62px;border-radius:50%;border:0;cursor:pointer;color:#fff;font:800 14px/1.15 var(--font);
   background:radial-gradient(circle at 50% 30%,#ff7a68,#d3202b 60%,#8f1118);
@@ -160,6 +161,10 @@ body{
   transition:transform .12s;
 }
 .restart:hover{transform:scale(1.08)} .restart:active{transform:scale(.95)}
+.restart.finish-early{
+  background:radial-gradient(circle at 50% 30%,#ffb347,#e67e22 60%,#935116);
+  box-shadow:0 0 0 4px #14172e,0 0 0 6px #f39c12,0 8px 18px rgba(243,156,18,.4);
+}
 .chips{display:flex;gap:10px;flex-wrap:wrap}
 .chip{
   font:700 15px var(--font);color:#c9d6ff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);
@@ -186,16 +191,50 @@ body{
 .rules{list-style:none;margin:16px 0 22px;padding:0;text-align:left;display:grid;gap:8px}
 .rules li{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:10px 14px;border-radius:14px;font-size:16px;color:#dce5ff}
 .rules b{color:#ffd666}
+.btn-group{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
 .btn{
-  border:0;cursor:pointer;font:800 clamp(18px,3.4vw,24px) var(--font);color:#fff;padding:14px 38px;border-radius:999px;
+  border:0;cursor:pointer;font:800 clamp(18px,3.4vw,22px) var(--font);color:#fff;padding:13px 32px;border-radius:999px;
   background:linear-gradient(180deg,#ff6e5f,#d3202b);
   box-shadow:0 6px 0 #8f1118,0 14px 26px rgba(255,70,70,.35);
-  transition:transform .1s, box-shadow .1s;margin-top:6px;
+  transition:transform .1s, box-shadow .1s;
 }
 .btn:hover{transform:translateY(-2px)}
 .btn:active{transform:translateY(5px);box-shadow:0 1px 0 #8f1118,0 4px 10px rgba(255,70,70,.3)}
 .btn.blue{background:linear-gradient(180deg,#5b86ff,#2f4fd1);box-shadow:0 6px 0 #1d2f87,0 14px 26px rgba(70,110,255,.35)}
 .btn.blue:active{box-shadow:0 1px 0 #1d2f87,0 4px 10px rgba(70,110,255,.3)}
+.btn.ghost{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);
+  box-shadow:0 5px 0 rgba(0,0,0,.35),0 10px 20px rgba(0,0,0,.25);color:#dce5ff;
+}
+.btn.ghost:hover{background:rgba(255,255,255,.16)}
+.btn.ghost:active{box-shadow:0 1px 0 rgba(0,0,0,.35),0 4px 8px rgba(0,0,0,.2)}
+.btn.sm{font-size:15px;padding:8px 18px;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.btn.sm:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+
+/* ---------- History Panel ---------- */
+.panel.wide{width:min(660px,100%)}
+.history-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.history-list{
+  max-height:310px;overflow-y:auto;margin:12px 0 18px;padding-right:4px;
+  display:flex;flex-direction:column;gap:10px;text-align:left;
+}
+.history-list::-webkit-scrollbar{width:6px}
+.history-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:99px}
+.h-item{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.h-main{display:flex;flex-direction:column;gap:4px}
+.h-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.h-date{font-size:13px;color:#9fb0e8}
+.h-badge{font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(138,184,255,.18);color:#8ab8ff;border:1px solid rgba(138,184,255,.35)}
+.h-badge.early{background:rgba(255,180,70,.18);color:#ffc670;border-color:rgba(255,180,70,.35)}
+.h-detail{font-size:14px;color:#dce5ff;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.h-detail .g{color:var(--good);font-weight:700}
+.h-detail .r{color:var(--bad);font-weight:700}
+.h-score{font-size:28px;font-weight:900;color:#8ab8ff;font-variant-numeric:tabular-nums;text-align:right}
+.h-score small{font-size:14px;color:#c9d6ff;margin-left:3px}
+.h-empty{padding:36px 16px;color:#9fb0e8;font-size:16px;text-align:center;background:rgba(255,255,255,.04);border-radius:16px;border:1px dashed rgba(255,255,255,.15)}
 
 .panel.warn{border-color:#ff6b6b;box-shadow:0 0 0 4px rgba(255,90,90,.25),0 30px 80px rgba(0,0,0,.6);animation:panelIn .25s ease,warnBlink 1s ease-in-out infinite alternate}
 @keyframes warnBlink{to{box-shadow:0 0 0 10px rgba(255,90,90,.12),0 30px 80px rgba(0,0,0,.6)}}
@@ -248,7 +287,10 @@ body{
   </main>
 
   <div class="footer">
-    <button class="restart" id="restartBtn" tabindex="-1" title="回到開始畫面">重新<br>測驗</button>
+    <div class="footer-left">
+      <button class="restart" id="restartBtn" tabindex="-1" title="回到開始畫面">重新<br>測驗</button>
+      <button class="restart finish-early" id="earlyFinishBtn" tabindex="-1" title="提前結算並儲存目前成績">提早<br>結束</button>
+    </div>
     <div class="chips">
       <button class="chip" id="showAllBtn" tabindex="-1" aria-pressed="false">提示全部按鍵</button>
       <button class="chip" id="soundBtn" tabindex="-1" aria-pressed="true">音效</button>
@@ -268,7 +310,10 @@ body{
       <li>🚫 連續打錯 <b>5 次</b>會暫停計時,需點擊畫面才能繼續</li>
       <li>🖐 鍵盤顏色對應手指,目標符號會顯示在對應的按鍵上</li>
     </ul>
-    <button class="btn" id="startBtn" tabindex="-1">準備好了,開始!</button>
+    <div class="btn-group">
+      <button class="btn" id="startBtn" tabindex="-1">準備好了,開始!</button>
+      <button class="btn ghost" id="historyFromReadyBtn" tabindex="-1">📜 歷史紀錄</button>
+    </div>
   </section>
 
   <!-- 連錯警告 -->
@@ -276,12 +321,15 @@ body{
     <div class="sign">🚫</div>
     <div class="big">不要亂按!</div>
     <p>你已經連續打錯 5 次,計時已暫停。<br>請先看清楚紅色圓鈕的符號,再從鍵盤上找到亮起的按鍵與對應的手指。</p>
-    <button class="btn" id="resumeBtn" tabindex="-1">我知道了,繼續</button>
+    <div class="btn-group">
+      <button class="btn" id="resumeBtn" tabindex="-1">我知道了,繼續</button>
+      <button class="btn ghost" id="warnEarlyFinishBtn" tabindex="-1">提早結束</button>
+    </div>
   </section>
 
   <!-- 結算 -->
   <section class="panel" id="pDone">
-    <h2>時間到!</h2>
+    <h2 id="doneTitle">時間到!</h2>
     <div class="final"><span id="rScore">0</span><small>分</small></div>
     <div class="tiles">
       <div class="tile g"><span>打對</span><b id="rRight">0</b></div>
@@ -292,7 +340,25 @@ body{
     <div class="ratio"><span class="g" id="pctG">對 0%</span><span class="r" id="pctR">錯 0%</span></div>
     <div class="extra" id="rExtra"></div>
     <div class="comment" id="rComment"></div>
-    <button class="btn blue" id="againBtn" tabindex="-1">再練一次</button>
+    <div class="btn-group">
+      <button class="btn blue" id="againBtn" tabindex="-1">再練一次</button>
+      <button class="btn ghost" id="historyFromDoneBtn" tabindex="-1">📜 歷史紀錄</button>
+    </div>
+  </section>
+
+  <!-- 歷史紀錄 -->
+  <section class="panel wide" id="pHistory">
+    <h2>📜 練習歷史紀錄</h2>
+    <div class="history-stats">
+      <div class="tile"><span>累計場次</span><b id="hCount">0</b></div>
+      <div class="tile g"><span>最高分數</span><b id="hBest">0</b></div>
+      <div class="tile"><span>平均正確率</span><b id="hAvgAcc">—</b></div>
+    </div>
+    <div class="history-list" id="historyList"></div>
+    <div class="btn-group">
+      <button class="btn blue" id="historyBackBtn" tabindex="-1">返回</button>
+      <button class="btn ghost sm" id="clearHistoryBtn" tabindex="-1">清除紀錄</button>
+    </div>
   </section>
 </div>
 
@@ -379,20 +445,101 @@ body{
   });
 
   /* ===== 狀態 ===== */
-  let state = 'ready';   // ready | playing | warn | done
+  let state = 'ready';   // ready | playing | warn | done | history
+  let prevState = 'ready';
   let remaining = GAME_SECONDS;
   let elapsedMs = 0;
   let score = 0, right = 0, wrong = 0, strikes = 0;
   let target = null;
   let missed = {};
   let lastTick = performance.now();
+  const STORAGE_KEY = 'zhuyin_typing_history_v1';
+
+  /* ===== 歷史紀錄 Storage ===== */
+  function loadHistory(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return []; }
+  }
+  function saveRecord(rec){
+    try{
+      const list = loadHistory();
+      list.unshift(rec);
+      if (list.length > 50) list.length = 50; // 最多保留最近 50 筆
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }catch(e){}
+  }
+  function clearHistory(){
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    renderHistory();
+  }
+  function formatDate(ts){
+    const d = new Date(ts);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function renderHistory(){
+    const list = loadHistory();
+    $('hCount').textContent = list.length;
+    if (!list.length){
+      $('hBest').textContent = '0';
+      $('hAvgAcc').textContent = '—';
+      $('historyList').innerHTML = '<div class="h-empty">目前還沒有練習紀錄，快開始第一場練習吧！</div>';
+      $('clearHistoryBtn').style.display = 'none';
+      return;
+    }
+    $('clearHistoryBtn').style.display = '';
+    const best = Math.max(...list.map(r => r.score));
+    const avgAcc = list.reduce((s, r) => s + (r.accuracy || 0), 0) / list.length;
+    $('hBest').textContent = best;
+    $('hAvgAcc').textContent = avgAcc.toFixed(1) + '%';
+
+    const box = $('historyList');
+    box.innerHTML = '';
+    list.forEach(r => {
+      const item = el('div', 'h-item');
+      const badgeCls = r.early ? 'h-badge early' : 'h-badge';
+      const badgeTxt = r.early ? `提早結束 (${r.duration}秒)` : `完整測驗 (${r.duration}秒)`;
+      const missedHtml = (r.topMissed && r.topMissed.length)
+        ? `<span>常錯: ${r.topMissed.map(([s, n]) => `${s}×${n}`).join(' ')}</span>`
+        : '';
+      item.innerHTML = `
+        <div class="h-main">
+          <div class="h-top">
+            <span class="h-date">${formatDate(r.ts)}</span>
+            <span class="${badgeCls}">${badgeTxt}</span>
+          </div>
+          <div class="h-detail">
+            <span class="g">對 ${r.right}</span>
+            <span class="r">錯 ${r.wrong}</span>
+            <span>正確率 ${(r.accuracy || 0).toFixed(1)}%</span>
+            <span>${r.perMin} 個/分</span>
+            ${missedHtml}
+          </div>
+        </div>
+        <div class="h-score">${r.score}<small>分</small></div>
+      `;
+      box.append(item);
+    });
+  }
+  function openHistory(from){
+    prevState = from;
+    state = 'history';
+    renderHistory();
+    showPanel('history');
+  }
+  function closeHistory(){
+    state = prevState;
+    showPanel(prevState);
+  }
 
   /* ===== DOM 參考 ===== */
   const timeEl = $('time'), scoreEl = $('score');
   const orb = $('orb'), symEl = $('sym'), toneHint = $('toneHint');
   const strikeDots = [...document.querySelectorAll('#strikes i')];
   const overlay = $('overlay');
-  const panels = {ready:$('pReady'), warn:$('pWarn'), done:$('pDone')};
+  const panels = {ready:$('pReady'), warn:$('pWarn'), done:$('pDone'), history:$('pHistory')};
 
   function showPanel(name){
     overlay.classList.add('show');
@@ -405,6 +552,8 @@ body{
     timeEl.classList.toggle('low', state === 'playing' && remaining <= 10);
     scoreEl.textContent = score;
     strikeDots.forEach((d, i) => d.classList.toggle('on', i < strikes));
+    const isPlayingOrWarn = state === 'playing' || state === 'warn';
+    $('earlyFinishBtn').style.display = isPlayingOrWarn ? '' : 'none';
   }
 
   /* ===== 音效 ===== */
@@ -503,11 +652,13 @@ body{
     hideOverlay();
     renderHUD();
   }
-  function finishGame(){
+  function finishGame(isEarly = false){
     state = 'done';
-    remaining = 0;
+    const usedSec = isEarly ? Math.max(1, Math.round(elapsedMs / 1000)) : GAME_SECONDS;
+    if (!isEarly) remaining = 0;
     clearTarget();
     renderHUD();
+    $('doneTitle').textContent = isEarly ? '提早結束!' : '時間到!';
     const total = right + wrong;
     const pr = total ? right / total * 100 : 0;
     const pw = total ? wrong / total * 100 : 0;
@@ -518,9 +669,9 @@ body{
     $('barG').style.width = '0'; $('barR').style.width = '0';
     $('pctG').textContent = total ? `對 ${pr.toFixed(1)}%` : '對 —';
     $('pctR').textContent = total ? `錯 ${pw.toFixed(1)}%` : '錯 —';
-    const perMin = (right / GAME_SECONDS * 60).toFixed(1);
+    const perMin = (right / usedSec * 60).toFixed(1);
     const top = Object.entries(missed).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    let extra = `平均每分鐘打對 <b style="color:#fff">${perMin}</b> 個`;
+    let extra = `練習時間 <b style="color:#fff">${usedSec}</b> 秒 · 平均每分鐘打對 <b style="color:#fff">${perMin}</b> 個`;
     if (top.length){
       const chips = top.map(([s, n]) => {
         const box = el('span', 'missed-sym'); renderSym(s, box);
@@ -535,6 +686,20 @@ body{
       pr >= 85 ? '不錯喔!再練幾次會更穩。' :
       pr >= 70 ? '繼續加油,多留意手指的分工。' :
                  '別急,先看清楚手指位置,慢慢打也沒關係。';
+
+    saveRecord({
+      ts: Date.now(),
+      score,
+      right,
+      wrong,
+      total,
+      accuracy: Number(pr.toFixed(1)),
+      perMin: Number(perMin),
+      duration: usedSec,
+      early: Boolean(isEarly),
+      topMissed: top
+    });
+
     sfx.done();
     showPanel('done');
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -594,6 +759,14 @@ body{
   press('resumeBtn', resumeGame);
   press('againBtn', toReady);
   press('restartBtn', toReady);
+  press('earlyFinishBtn', () => { if (state === 'playing' || state === 'warn') finishGame(true); });
+  press('warnEarlyFinishBtn', () => finishGame(true));
+  press('historyFromReadyBtn', () => openHistory('ready'));
+  press('historyFromDoneBtn', () => openHistory('done'));
+  press('historyBackBtn', closeHistory);
+  press('clearHistoryBtn', () => {
+    if (confirm('確定要清除所有歷史紀錄嗎？')) clearHistory();
+  });
 
   $('showAllBtn').addEventListener('click', ev => {
     const on = ev.currentTarget.getAttribute('aria-pressed') !== 'true';
