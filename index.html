@@ -211,6 +211,23 @@ body{
 .btn.sm{font-size:15px;padding:8px 18px;box-shadow:0 3px 0 rgba(0,0,0,.35)}
 .btn.sm:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
 
+/* ---------- Mode Switch / Tabs ---------- */
+.mode-tabs{
+  display:inline-flex;background:rgba(0,0,0,.32);padding:5px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);gap:6px;margin:6px 0 10px;
+}
+.mode-tab{
+  border:0;cursor:pointer;font:800 16px var(--font);color:#aebce9;background:transparent;
+  padding:8px 22px;border-radius:999px;transition:all .15s;
+}
+.mode-tab:hover{color:#fff}
+.mode-tab.active{
+  background:linear-gradient(180deg,#5b86ff,#2f4fd1);color:#fff;
+  box-shadow:0 3px 10px rgba(60,100,255,.45);
+}
+.h-badge.mode-zh{background:rgba(160,120,255,.2);color:#d0b8ff;border-color:rgba(160,120,255,.4)}
+.h-badge.mode-en{background:rgba(70,229,138,.18);color:#6ff2a7;border-color:rgba(70,229,138,.38)}
+
 /* ---------- History Panel ---------- */
 .panel.wide{width:min(660px,100%)}
 .history-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
@@ -302,8 +319,12 @@ body{
 <div class="overlay show" id="overlay">
   <!-- 準備開始 -->
   <section class="panel show" id="pReady">
-    <h2>注音綜合練習</h2>
-    <p>37 個注音符號 + 4 個聲調符號(˙ ˊ ˇ ˋ)</p>
+    <h2 id="readyTitle">注音綜合練習</h2>
+    <div class="mode-tabs" role="tablist" aria-label="練習模式選擇">
+      <button class="mode-tab active" data-mode="zhuyin" tabindex="-1">ㄅㄆㄇ 注音練習</button>
+      <button class="mode-tab" data-mode="english" tabindex="-1">ABC 英打練習</button>
+    </div>
+    <p id="readyDesc">37 個注音符號 + 4 個聲調符號(˙ ˊ ˇ ˋ)</p>
     <ul class="rules">
       <li>⏱ 共 <b>200 秒</b>,按下「開始」才會開始倒數</li>
       <li>✅ 打對 <b>+500</b> 分 ・ ❌ 打錯 <b>−50</b> 分</li>
@@ -349,6 +370,11 @@ body{
   <!-- 歷史紀錄 -->
   <section class="panel wide" id="pHistory">
     <h2>📜 練習歷史紀錄</h2>
+    <div class="mode-tabs" role="tablist" aria-label="歷史紀錄篩選">
+      <button class="mode-tab active" data-hfilter="all" tabindex="-1">全部</button>
+      <button class="mode-tab" data-hfilter="zhuyin" tabindex="-1">注音</button>
+      <button class="mode-tab" data-hfilter="english" tabindex="-1">英打</button>
+    </div>
     <div class="history-stats">
       <div class="tile"><span>累計場次</span><b id="hCount">0</b></div>
       <div class="tile g"><span>最高分數</span><b id="hBest">0</b></div>
@@ -372,15 +398,39 @@ body{
   const SCORE_WRONG = 50;
   const STRIKE_LIMIT = 5;
 
-  /* ===== 標準注音鍵盤對應(以實體按鍵 code 判斷,不受輸入法/大小寫影響) ===== */
-  const CODE2SYM = {
+  /* ===== 模式與鍵盤對應(以實體按鍵 code 判斷,不受輸入法/大小寫影響) ===== */
+  const ZHUYIN_MAP = {
     Digit1:'ㄅ', Digit2:'ㄉ', Digit3:'ˇ', Digit4:'ˋ', Digit5:'ㄓ', Digit6:'ˊ', Digit7:'˙', Digit8:'ㄚ', Digit9:'ㄞ', Digit0:'ㄢ', Minus:'ㄦ',
     KeyQ:'ㄆ', KeyW:'ㄊ', KeyE:'ㄍ', KeyR:'ㄐ', KeyT:'ㄔ', KeyY:'ㄗ', KeyU:'ㄧ', KeyI:'ㄛ', KeyO:'ㄟ', KeyP:'ㄣ',
     KeyA:'ㄇ', KeyS:'ㄋ', KeyD:'ㄎ', KeyF:'ㄑ', KeyG:'ㄕ', KeyH:'ㄘ', KeyJ:'ㄨ', KeyK:'ㄜ', KeyL:'ㄠ', Semicolon:'ㄤ',
     KeyZ:'ㄈ', KeyX:'ㄌ', KeyC:'ㄏ', KeyV:'ㄒ', KeyB:'ㄖ', KeyN:'ㄙ', KeyM:'ㄩ', Comma:'ㄝ', Period:'ㄡ', Slash:'ㄥ'
   };
-  const SYM2CODE = Object.fromEntries(Object.entries(CODE2SYM).map(([c, s]) => [s, c]));
-  const SYMBOLS = Object.keys(SYM2CODE);
+  const ENGLISH_MAP = {
+    KeyQ:'Q', KeyW:'W', KeyE:'E', KeyR:'R', KeyT:'T', KeyY:'Y', KeyU:'U', KeyI:'I', KeyO:'O', KeyP:'P',
+    KeyA:'A', KeyS:'S', KeyD:'D', KeyF:'F', KeyG:'G', KeyH:'H', KeyJ:'J', KeyK:'K', KeyL:'L',
+    KeyZ:'Z', KeyX:'X', KeyC:'C', KeyV:'V', KeyB:'B', KeyN:'N', KeyM:'M'
+  };
+  const MODES = {
+    zhuyin: {
+      title: '注音綜合練習',
+      desc: '37 個注音符號 + 4 個聲調符號(˙ ˊ ˇ ˋ)',
+      badge: '注音',
+      badgeCls: 'mode-zh',
+      code2sym: ZHUYIN_MAP,
+      sym2code: Object.fromEntries(Object.entries(ZHUYIN_MAP).map(([c, s]) => [s, c])),
+      symbols: Object.values(ZHUYIN_MAP)
+    },
+    english: {
+      title: '英打字母練習',
+      desc: '26 個英文字母 (A ~ Z) 指法位置練習',
+      badge: '英打',
+      badgeCls: 'mode-en',
+      code2sym: ENGLISH_MAP,
+      sym2code: Object.fromEntries(Object.entries(ENGLISH_MAP).map(([c, s]) => [s, c])),
+      symbols: Object.values(ENGLISH_MAP)
+    }
+  };
+  let currentMode = 'zhuyin';
 
   /* 聲調符號用 SVG 繪製,確保在任何字型下都置中且清楚 */
   const svg = d => `<svg viewBox="0 0 100 100" aria-hidden="true">${d}</svg>`;
@@ -418,23 +468,45 @@ body{
 
   const keyboard = $('keyboard');
   const keyEls = {};         // code -> element
+  const capEls = {};         // code -> cap element
   const keyFinger = {};      // code -> finger id
   ROWS.forEach(r => {
     const row = el('div', 'krow');
     row.style.marginLeft = `calc(var(--u) * ${r.offset})`;
     r.keys.forEach((code, i) => {
       const f = r.fingers[i];
-      const k = el('div', `key f-${f}` + (CODE2SYM[code] ? '' : ' dead'));
+      const k = el('div', `key f-${f}`);
       k.dataset.code = code;
       const cap = el('span', 'cap');
-      if (CODE2SYM[code]) renderSym(CODE2SYM[code], cap);
       k.append(cap);
       row.append(k);
       keyEls[code] = k;
+      capEls[code] = cap;
       keyFinger[code] = f;
     });
     keyboard.append(row);
   });
+
+  function applyModeToKeyboard(){
+    const map = MODES[currentMode].code2sym;
+    Object.keys(keyEls).forEach(code => {
+      const sym = map[code];
+      keyEls[code].classList.toggle('dead', !sym);
+      const cap = capEls[code];
+      if (sym) renderSym(sym, cap);
+      else cap.innerHTML = '';
+    });
+  }
+  function setMode(mode){
+    if (!MODES[mode]) return;
+    currentMode = mode;
+    $('readyTitle').textContent = MODES[mode].title;
+    $('readyDesc').textContent = MODES[mode].desc;
+    document.querySelectorAll('#pReady .mode-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+    applyModeToKeyboard();
+  }
 
   const fingersBox = $('fingers');
   const labelEls = BOTTOM_LABELS.map(f => {
@@ -456,6 +528,7 @@ body{
   const STORAGE_KEY = 'zhuyin_typing_history_v1';
 
   /* ===== 歷史紀錄 Storage ===== */
+  let historyFilter = 'all';
   function loadHistory(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -480,16 +553,18 @@ body{
     return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
   function renderHistory(){
-    const list = loadHistory();
+    const allList = loadHistory();
+    const list = historyFilter === 'all'
+      ? allList
+      : allList.filter(r => (r.mode || 'zhuyin') === historyFilter);
     $('hCount').textContent = list.length;
+    $('clearHistoryBtn').style.display = allList.length ? '' : 'none';
     if (!list.length){
       $('hBest').textContent = '0';
       $('hAvgAcc').textContent = '—';
-      $('historyList').innerHTML = '<div class="h-empty">目前還沒有練習紀錄，快開始第一場練習吧！</div>';
-      $('clearHistoryBtn').style.display = 'none';
+      $('historyList').innerHTML = '<div class="h-empty">目前還沒有此類別的練習紀錄，快開始練習吧！</div>';
       return;
     }
-    $('clearHistoryBtn').style.display = '';
     const best = Math.max(...list.map(r => r.score));
     const avgAcc = list.reduce((s, r) => s + (r.accuracy || 0), 0) / list.length;
     $('hBest').textContent = best;
@@ -499,6 +574,8 @@ body{
     box.innerHTML = '';
     list.forEach(r => {
       const item = el('div', 'h-item');
+      const mKey = r.mode || 'zhuyin';
+      const mInfo = MODES[mKey] || MODES.zhuyin;
       const badgeCls = r.early ? 'h-badge early' : 'h-badge';
       const badgeTxt = r.early ? `提早結束 (${r.duration}秒)` : `完整測驗 (${r.duration}秒)`;
       const missedHtml = (r.topMissed && r.topMissed.length)
@@ -508,6 +585,7 @@ body{
         <div class="h-main">
           <div class="h-top">
             <span class="h-date">${formatDate(r.ts)}</span>
+            <span class="h-badge ${mInfo.badgeCls}">${mInfo.badge}</span>
             <span class="${badgeCls}">${badgeTxt}</span>
           </div>
           <div class="h-detail">
@@ -590,15 +668,16 @@ body{
     symEl.classList.remove('idle');
     renderSym(sym, symEl);
     toneHint.textContent = TONE_NAME[sym] ? `聲調:${TONE_NAME[sym]}` : '';
-    const code = SYM2CODE[sym], f = keyFinger[code];
+    const code = MODES[currentMode].sym2code[sym], f = keyFinger[code];
     keyEls[code].classList.add('target');
     labelEls.forEach(l => l.classList.toggle('active', l.dataset.f === f));
     $('handL').classList.toggle('active', f.endsWith('L'));
     $('handR').classList.toggle('active', f.endsWith('R'));
   }
   function nextTarget(){
+    const syms = MODES[currentMode].symbols;
     let s;
-    do { s = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; } while (s === target && SYMBOLS.length > 1);
+    do { s = syms[Math.floor(Math.random() * syms.length)]; } while (s === target && syms.length > 1);
     setTarget(s);
   }
 
@@ -689,6 +768,7 @@ body{
 
     saveRecord({
       ts: Date.now(),
+      mode: currentMode,
       score,
       right,
       wrong,
@@ -708,7 +788,7 @@ body{
   }
 
   function handleKey(code){
-    const sym = CODE2SYM[code];
+    const sym = MODES[currentMode].code2sym[code];
     if (sym === target){
       right++; score += SCORE_RIGHT; strikes = 0;
       flashKey(code, 'ok'); sfx.ok();
@@ -745,7 +825,7 @@ body{
       if (e.code === 'Space' || e.code === 'Enter') e.preventDefault();  // 避免用鍵盤觸發按鈕,須用滑鼠點擊
       return;
     }
-    if (!CODE2SYM[e.code]) return;
+    if (!MODES[currentMode].code2sym[e.code]) return;
     e.preventDefault();
     if (e.repeat) return;
     handleKey(e.code);
@@ -768,6 +848,24 @@ body{
     if (confirm('確定要清除所有歷史紀錄嗎？')) clearHistory();
   });
 
+  document.querySelectorAll('#pReady .mode-tab').forEach(btn => {
+    btn.addEventListener('click', ev => {
+      ev.currentTarget.blur();
+      setMode(btn.dataset.mode);
+    });
+  });
+
+  document.querySelectorAll('#pHistory .mode-tab').forEach(btn => {
+    btn.addEventListener('click', ev => {
+      ev.currentTarget.blur();
+      historyFilter = btn.dataset.hfilter;
+      document.querySelectorAll('#pHistory .mode-tab').forEach(b => {
+        b.classList.toggle('active', b === btn);
+      });
+      renderHistory();
+    });
+  });
+
   $('showAllBtn').addEventListener('click', ev => {
     const on = ev.currentTarget.getAttribute('aria-pressed') !== 'true';
     ev.currentTarget.setAttribute('aria-pressed', on);
@@ -780,6 +878,7 @@ body{
     ev.currentTarget.blur();
   });
 
+  setMode('zhuyin');
   toReady();
 })();
 </script>
