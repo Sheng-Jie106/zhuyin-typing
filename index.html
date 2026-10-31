@@ -1,587 +1,1569 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>注音綜合打字練習 | 快打高手風格</title>
-<meta name="description" content="純 HTML + JavaScript 的注音綜合打字練習:全注音符號加聲調符號,鍵盤依手指分色並提示按鍵位置,限時 200 秒計分。">
-<style>
-:root{
-  --font:"Microsoft JhengHei","微軟正黑體","PingFang TC","Noto Sans TC","Heiti TC",system-ui,sans-serif;
-  --good:#46e58a;
-  --bad:#ff5a5a;
-}
-*{box-sizing:border-box}
-html,body{margin:0;min-height:100%}
-body{
-  font-family:var(--font);
-  color:#eaf0ff;
-  min-height:100vh;
-  overflow-x:hidden;
-  user-select:none;
-  background:
-    radial-gradient(1100px 650px at 50% -10%, #2f4290 0%, transparent 62%),
-    radial-gradient(700px 500px at 100% 100%, #3a1d5c 0%, transparent 60%),
-    linear-gradient(180deg,#18224a,#090d20);
-  background-attachment:fixed;
-}
-.app{max-width:1100px;margin:0 auto;padding:16px 16px 26px}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>注音綜合打字練習 | 快打高手風格</title>
+  <meta name="description" content="純 HTML + JavaScript 的注音綜合打字練習:全注音符號加聲調符號,鍵盤依手指分色並提示按鍵位置,限時 200 秒計分。">
+  <style>
+    :root {
+      --font: "Microsoft JhengHei", "微軟正黑體", "PingFang TC", "Noto Sans TC", "Heiti TC", system-ui, sans-serif;
+      --good: #46e58a;
+      --bad: #ff5a5a;
+    }
 
-/* ---------- HUD ---------- */
-.hud{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
-.card{
-  display:flex;align-items:baseline;gap:12px;
-  padding:8px 24px;border-radius:20px;
-  background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.15);
-  backdrop-filter:blur(8px);
-  box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12);
-}
-.card .label{font-size:clamp(18px,3vw,28px);font-weight:700;color:#c9d6ff}
-.card .val{font-size:clamp(32px,5.4vw,56px);font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
-.card .unit{font-size:clamp(20px,3.4vw,34px);font-weight:800;color:#8ab8ff}
-#time{color:#ff6b6b;min-width:2.2ch;text-align:right}
-#score{color:#8ab8ff;min-width:2ch;text-align:right}
-#time.low{animation:lowPulse .6s ease-in-out infinite alternate}
-@keyframes lowPulse{from{text-shadow:0 0 0 rgba(255,80,80,0)}to{text-shadow:0 0 22px rgba(255,80,80,.95)}}
-#score.bump{animation:bump .25s ease}
-@keyframes bump{40%{transform:scale(1.15)}}
+    * {
+      box-sizing: border-box
+    }
 
-/* ---------- Stage ---------- */
-.stage{--u:min(calc((100vw - 32px) / 13.5), 66px);margin-top:6px}
+    html,
+    body {
+      margin: 0;
+      min-height: 100%
+    }
 
-.orb-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:18px}
-.orb{
-  width:clamp(130px,21vw,185px);aspect-ratio:1;border-radius:50%;
-  display:grid;place-items:center;position:relative;
-  background:
-    radial-gradient(circle at 50% 30%, #ff7a68 0%, #e02a2a 45%, #a30f1a 100%);
-  box-shadow:
-    0 0 0 9px #14172e,
-    0 0 0 13px #6f78d6,
-    0 0 0 15px #262b57,
-    0 22px 60px rgba(255,60,60,.45),
-    inset 0 -14px 28px rgba(80,0,10,.55),
-    inset 0 12px 20px rgba(255,255,255,.28);
-}
-.orb::after{ /* 高光 */
-  content:"";position:absolute;top:6%;left:18%;width:64%;height:34%;border-radius:50%;
-  background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,0));pointer-events:none;
-}
-.orb.shake{animation:shake .28s}
-.orb.ok{animation:okPop .22s}
-@keyframes shake{20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
-@keyframes okPop{40%{transform:scale(1.07)}}
-.sym{
-  color:#ffe600;font-weight:900;line-height:1;
-  font-size:clamp(78px,12.5vw,112px);
-  text-shadow:0 3px 0 #b58a00, 0 6px 14px rgba(0,0,0,.45);
-  display:grid;place-items:center;position:relative;z-index:1;
-}
-.sym svg{width:1em;height:1em;display:block;filter:drop-shadow(0 3px 0 #b58a00) drop-shadow(0 6px 8px rgba(0,0,0,.4))}
-.sym.idle{font-size:clamp(30px,5vw,44px);color:#ffd7d2;text-shadow:none;letter-spacing:.1em}
-.tone-hint{height:26px;font-size:18px;font-weight:700;color:#ffd666;letter-spacing:.08em}
-.strikes{display:flex;gap:7px;align-items:center;font-size:14px;color:#aab6e6}
-.strikes i{width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);transition:all .15s}
-.strikes i.on{background:var(--bad);border-color:#ffb0b0;box-shadow:0 0 10px var(--bad)}
+    body {
+      font-family: var(--font);
+      color: #eaf0ff;
+      min-height: 100vh;
+      overflow-x: hidden;
+      user-select: none;
+      background:
+        radial-gradient(1100px 650px at 50% -10%, #2f4290 0%, transparent 62%),
+        radial-gradient(700px 500px at 100% 100%, #3a1d5c 0%, transparent 60%),
+        linear-gradient(180deg, #18224a, #090d20);
+      background-attachment: fixed;
+    }
 
-.float{
-  position:absolute;top:14%;left:calc(50% + clamp(100px,14vw,135px));
-  font-size:34px;font-weight:900;pointer-events:none;animation:floatUp .85s ease-out forwards;
-  text-shadow:0 2px 8px rgba(0,0,0,.5)
-}
-.float.plus{color:var(--good)} .float.minus{color:var(--bad)}
-@keyframes floatUp{from{opacity:1;transform:translateY(10px)}to{opacity:0;transform:translateY(-46px)}}
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 16px 26px
+    }
 
-/* ---------- Keyboard ---------- */
-.keyboard{width:calc(var(--u) * 13.5);margin:0 auto}
-.krow{display:flex}
-.key{
-  width:calc(var(--u) - 6px);height:calc(var(--u) - 6px);margin:3px;flex:none;
-  border-radius:calc(var(--u) * .17);position:relative;
-  display:grid;place-items:center;
-  background:linear-gradient(160deg,var(--c1),var(--c2));
-  box-shadow:0 4px 0 var(--c3), 0 7px 10px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.5);
-  transition:transform .08s, box-shadow .08s, filter .15s;
-}
-.key::before{
-  content:"";position:absolute;inset:13%;border-radius:calc(var(--u) * .12);
-  background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,.3));
-  box-shadow:inset 0 2px 3px rgba(0,0,0,.14);
-}
-.key.dead{filter:saturate(.55) brightness(.8)}
-.cap{
-  position:relative;z-index:1;font-weight:900;color:#1d3fb5;line-height:1;
-  font-size:calc(var(--u) * .46);opacity:0;transition:opacity .12s;
-  display:grid;place-items:center;
-}
-.cap svg{width:1em;height:1em;display:block}
-.keyboard.show-all .cap{opacity:.62}
-.key.target{
-  transform:translateY(-3px) scale(1.1);z-index:3;
-  animation:glow 1s ease-in-out infinite;
-}
-.key.target::before{background:linear-gradient(180deg,#fff,#eaf0ff)}
-.key.target .cap{opacity:1;font-size:calc(var(--u) * .5);color:#1331b8}
-@keyframes glow{
-  0%,100%{box-shadow:0 4px 0 var(--c3),0 0 0 3px #fff,0 0 14px 4px rgba(255,255,255,.55)}
-  50%{box-shadow:0 4px 0 var(--c3),0 0 0 3px #fff,0 0 26px 10px rgba(255,255,255,.95)}
-}
-.key.press{transform:translateY(3px);box-shadow:0 1px 0 var(--c3),0 3px 6px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.5)}
-.key.target.press{transform:translateY(0) scale(1.1)}
-.key.ok::before{background:linear-gradient(180deg,#b8ffd3,#46e58a)}
-.key.bad::before{background:linear-gradient(180deg,#ffc2c2,#ff5a5a)}
+    /* ---------- HUD ---------- */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap
+    }
 
-/* 手指配色 */
-.f-pL,.f-pR{--c1:#f8f9fc;--c2:#c8cdd8;--c3:#8c93a5;--lc:#e8ecf8}
-.f-rL,.f-rR{--c1:#bdf5f5;--c2:#5fcad1;--c3:#2b8c96;--lc:#6fe0e8}
-.f-mL,.f-mR{--c1:#f6c8f8;--c2:#c673d4;--c3:#85389a;--lc:#e29cf0}
-.f-iL{--c1:#fffbad;--c2:#e2d34a;--c3:#a09418;--lc:#f5e85c}
-.f-iR{--c1:#ffe3a3;--c2:#f2a83a;--c3:#b06f17;--lc:#ffb54d}
+    .card {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 8px 24px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, .07);
+      border: 1px solid rgba(255, 255, 255, .15);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .12);
+    }
 
-/* 手指標籤 */
-.fingers{display:flex;margin:8px auto 0;width:calc(var(--u) * 13.5);padding-left:calc(var(--u) * 2.5)}
-.flabel{
-  width:var(--u);flex:none;text-align:center;font-weight:800;line-height:1.12;
-  font-size:calc(var(--u) * .3);color:var(--lc);opacity:.78;transition:all .15s;
-  padding:3px 0;border-radius:10px;
-}
-.flabel.active{opacity:1;transform:scale(1.16);background:rgba(255,255,255,.12);text-shadow:0 0 12px var(--lc);box-shadow:0 0 0 1px var(--lc)}
-.hands{display:flex;width:calc(var(--u) * 13.5);margin:6px auto 0;padding-left:calc(var(--u) * 2.5)}
-.hand{width:calc(var(--u) * 5);text-align:center;font-size:calc(var(--u) * .24);color:#9fb0e8;border-top:2px solid rgba(159,176,232,.45);padding-top:3px;font-weight:700;letter-spacing:.3em;margin:0 2px;transition:all .15s}
-.hand.active{color:#fff;border-top-color:#fff}
+    .card .label {
+      font-size: clamp(18px, 3vw, 28px);
+      font-weight: 700;
+      color: #c9d6ff
+    }
 
-/* ---------- Footer ---------- */
-.footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap}
-.footer-left{display:flex;align-items:center;gap:12px}
-.restart{
-  width:62px;height:62px;border-radius:50%;border:0;cursor:pointer;color:#fff;font:800 14px/1.15 var(--font);
-  background:radial-gradient(circle at 50% 30%,#ff7a68,#d3202b 60%,#8f1118);
-  box-shadow:0 0 0 4px #14172e,0 0 0 6px #6f78d6,0 8px 18px rgba(255,60,60,.4);
-  transition:transform .12s;
-}
-.restart:hover{transform:scale(1.08)} .restart:active{transform:scale(.95)}
-.restart.finish-early{
-  background:radial-gradient(circle at 50% 30%,#ffb347,#e67e22 60%,#935116);
-  box-shadow:0 0 0 4px #14172e,0 0 0 6px #f39c12,0 8px 18px rgba(243,156,18,.4);
-}
-.chips{display:flex;gap:10px;flex-wrap:wrap}
-.chip{
-  font:700 15px var(--font);color:#c9d6ff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);
-  padding:9px 16px;border-radius:999px;cursor:pointer;transition:all .15s;
-}
-.chip:hover{background:rgba(255,255,255,.14)}
-.chip[aria-pressed="true"]{background:linear-gradient(180deg,#4f7dff,#3253d6);color:#fff;border-color:#9bb5ff;box-shadow:0 0 14px rgba(90,130,255,.5)}
-.credit{font-size:13px;color:#7f8fc4;margin-top:14px;text-align:center}
+    .card .val {
+      font-size: clamp(32px, 5.4vw, 56px);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1
+    }
 
-/* ---------- Overlay / Panels ---------- */
-.overlay{position:fixed;inset:0;display:none;place-items:center;background:rgba(5,8,22,.74);backdrop-filter:blur(6px);z-index:50;padding:16px;overflow:auto}
-.overlay.show{display:grid}
-.panel{
-  display:none;width:min(580px,100%);padding:30px 30px 28px;border-radius:28px;text-align:center;
-  background:linear-gradient(160deg,rgba(44,60,120,.96),rgba(17,23,52,.97));
-  border:1px solid rgba(255,255,255,.2);
-  box-shadow:0 30px 80px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.15);
-  animation:panelIn .25s ease;
-}
-.panel.show{display:block}
-@keyframes panelIn{from{opacity:0;transform:translateY(14px) scale(.96)}}
-.panel h2{margin:0 0 6px;font-size:clamp(26px,5vw,36px);font-weight:900;letter-spacing:.04em}
-.panel p{margin:8px 0;color:#c9d6ff;line-height:1.7;font-size:17px}
-.rules{list-style:none;margin:16px 0 22px;padding:0;text-align:left;display:grid;gap:8px}
-.rules li{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:10px 14px;border-radius:14px;font-size:16px;color:#dce5ff}
-.rules b{color:#ffd666}
-.btn-group{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
-.btn{
-  border:0;cursor:pointer;font:800 clamp(18px,3.4vw,22px) var(--font);color:#fff;padding:13px 32px;border-radius:999px;
-  background:linear-gradient(180deg,#ff6e5f,#d3202b);
-  box-shadow:0 6px 0 #8f1118,0 14px 26px rgba(255,70,70,.35);
-  transition:transform .1s, box-shadow .1s;
-}
-.btn:hover{transform:translateY(-2px)}
-.btn:active{transform:translateY(5px);box-shadow:0 1px 0 #8f1118,0 4px 10px rgba(255,70,70,.3)}
-.btn.blue{background:linear-gradient(180deg,#5b86ff,#2f4fd1);box-shadow:0 6px 0 #1d2f87,0 14px 26px rgba(70,110,255,.35)}
-.btn.blue:active{box-shadow:0 1px 0 #1d2f87,0 4px 10px rgba(70,110,255,.3)}
-.btn.ghost{
-  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);
-  box-shadow:0 5px 0 rgba(0,0,0,.35),0 10px 20px rgba(0,0,0,.25);color:#dce5ff;
-}
-.btn.ghost:hover{background:rgba(255,255,255,.16)}
-.btn.ghost:active{box-shadow:0 1px 0 rgba(0,0,0,.35),0 4px 8px rgba(0,0,0,.2)}
-.btn.sm{font-size:15px;padding:8px 18px;box-shadow:0 3px 0 rgba(0,0,0,.35)}
-.btn.sm:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+    .card .unit {
+      font-size: clamp(20px, 3.4vw, 34px);
+      font-weight: 800;
+      color: #8ab8ff
+    }
 
-/* ---------- Mode Switch / Tabs ---------- */
-.mode-tabs{
-  display:inline-flex;background:rgba(0,0,0,.32);padding:5px;border-radius:999px;
-  border:1px solid rgba(255,255,255,.15);gap:6px;margin:6px 0 10px;
-}
-.mode-tab{
-  border:0;cursor:pointer;font:800 16px var(--font);color:#aebce9;background:transparent;
-  padding:8px 22px;border-radius:999px;transition:all .15s;
-}
-.mode-tab:hover{color:#fff}
-.mode-tab.active{
-  background:linear-gradient(180deg,#5b86ff,#2f4fd1);color:#fff;
-  box-shadow:0 3px 10px rgba(60,100,255,.45);
-}
-.h-badge.mode-zh{background:rgba(160,120,255,.2);color:#d0b8ff;border-color:rgba(160,120,255,.4)}
-.h-badge.mode-en{background:rgba(70,229,138,.18);color:#6ff2a7;border-color:rgba(70,229,138,.38)}
+    #time {
+      color: #ff6b6b;
+      min-width: 2.2ch;
+      text-align: right
+    }
 
-/* ---------- History Panel ---------- */
-.panel.wide{width:min(660px,100%)}
-.history-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
-.history-list{
-  max-height:310px;overflow-y:auto;margin:12px 0 18px;padding-right:4px;
-  display:flex;flex-direction:column;gap:10px;text-align:left;
-}
-.history-list::-webkit-scrollbar{width:6px}
-.history-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:99px}
-.h-item{
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
-  border-radius:16px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
-}
-.h-main{display:flex;flex-direction:column;gap:4px}
-.h-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.h-date{font-size:13px;color:#9fb0e8}
-.h-badge{font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(138,184,255,.18);color:#8ab8ff;border:1px solid rgba(138,184,255,.35)}
-.h-badge.early{background:rgba(255,180,70,.18);color:#ffc670;border-color:rgba(255,180,70,.35)}
-.h-detail{font-size:14px;color:#dce5ff;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-.h-detail .g{color:var(--good);font-weight:700}
-.h-detail .r{color:var(--bad);font-weight:700}
-.h-score{font-size:28px;font-weight:900;color:#8ab8ff;font-variant-numeric:tabular-nums;text-align:right}
-.h-score small{font-size:14px;color:#c9d6ff;margin-left:3px}
-.h-empty{padding:36px 16px;color:#9fb0e8;font-size:16px;text-align:center;background:rgba(255,255,255,.04);border-radius:16px;border:1px dashed rgba(255,255,255,.15)}
+    #time.practice {
+      color: #46e58a
+    }
 
-.panel.warn{border-color:#ff6b6b;box-shadow:0 0 0 4px rgba(255,90,90,.25),0 30px 80px rgba(0,0,0,.6);animation:panelIn .25s ease,warnBlink 1s ease-in-out infinite alternate}
-@keyframes warnBlink{to{box-shadow:0 0 0 10px rgba(255,90,90,.12),0 30px 80px rgba(0,0,0,.6)}}
-.warn .big{font-size:clamp(44px,9vw,68px);font-weight:900;color:#ff6b6b;letter-spacing:.06em;margin:0 0 4px;text-shadow:0 0 24px rgba(255,80,80,.55)}
-.warn .sign{font-size:54px;line-height:1}
+    #timeUnit {
+      color: #ff8e8e
+    }
 
-.final{font-size:clamp(52px,11vw,84px);font-weight:900;color:#8ab8ff;line-height:1.1;margin:4px 0 0;font-variant-numeric:tabular-nums}
-.final small{font-size:.32em;margin-left:8px;color:#c9d6ff}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 14px}
-.tile{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px 6px}
-.tile span{display:block;font-size:14px;color:#aebce9}
-.tile b{display:block;font-size:30px;font-weight:900;font-variant-numeric:tabular-nums}
-.tile.g b{color:var(--good)} .tile.r b{color:var(--bad)}
-.bar{display:flex;height:22px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.1);box-shadow:inset 0 2px 5px rgba(0,0,0,.4)}
-.bar i{display:block;height:100%;transition:width .7s cubic-bezier(.2,.8,.2,1);width:0}
-.bar .g{background:linear-gradient(180deg,#7bf5b0,#2fc774)} .bar .r{background:linear-gradient(180deg,#ff8f8f,#e04444)}
-.ratio{display:flex;justify-content:space-between;font-weight:800;margin-top:8px;font-size:17px}
-.ratio .g{color:var(--good)} .ratio .r{color:var(--bad)}
-.extra{margin:14px 0 6px;font-size:15px;color:#b5c3f2;line-height:1.8}
-.comment{font-weight:800;color:#ffd666;font-size:18px;margin:10px 0 14px}
-.missed-sym{display:inline-grid;place-items:center;min-width:1.7em;height:1.7em;padding:0 .3em;margin:0 3px;border-radius:9px;background:rgba(255,90,90,.18);border:1px solid rgba(255,120,120,.4);color:#ffd0d0;font-weight:900;font-size:19px;vertical-align:middle}
-.missed-sym svg{width:1em;height:1em;display:block}
+    #timeUnit.practice {
+      color: #7bf5b0
+    }
 
-@media (max-width:560px){
-  .app{padding:10px 8px 20px}
-  .stage{--u:min(calc((100vw - 16px) / 13.5), 66px)}
-  .card{padding:6px 14px}
-  .panel{padding:22px 18px}
-}
-</style>
+    #score {
+      color: #8ab8ff;
+      min-width: 2ch;
+      text-align: right
+    }
+
+    #time.low {
+      animation: lowPulse .6s ease-in-out infinite alternate
+    }
+
+    @keyframes lowPulse {
+      from {
+        text-shadow: 0 0 0 rgba(255, 80, 80, 0)
+      }
+
+      to {
+        text-shadow: 0 0 22px rgba(255, 80, 80, .95)
+      }
+    }
+
+    #score.bump {
+      animation: bump .25s ease
+    }
+
+    @keyframes bump {
+      40% {
+        transform: scale(1.15)
+      }
+    }
+
+    /* ---------- Stage ---------- */
+    .stage {
+      --u: min(calc((100vw - 32px) / 13.5), 66px);
+      margin-top: 6px
+    }
+
+    .orb-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px
+    }
+
+    .orb {
+      width: clamp(130px, 21vw, 185px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      position: relative;
+      background:
+        radial-gradient(circle at 50% 30%, #ff7a68 0%, #e02a2a 45%, #a30f1a 100%);
+      box-shadow:
+        0 0 0 9px #14172e,
+        0 0 0 13px #6f78d6,
+        0 0 0 15px #262b57,
+        0 22px 60px rgba(255, 60, 60, .45),
+        inset 0 -14px 28px rgba(80, 0, 10, .55),
+        inset 0 12px 20px rgba(255, 255, 255, .28);
+    }
+
+    .orb::after {
+      /* 高光 */
+      content: "";
+      position: absolute;
+      top: 6%;
+      left: 18%;
+      width: 64%;
+      height: 34%;
+      border-radius: 50%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .45), rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .orb.shake {
+      animation: shake .28s
+    }
+
+    .orb.ok {
+      animation: okPop .22s
+    }
+
+    @keyframes shake {
+      20% {
+        transform: translateX(-9px)
+      }
+
+      40% {
+        transform: translateX(9px)
+      }
+
+      60% {
+        transform: translateX(-6px)
+      }
+
+      80% {
+        transform: translateX(6px)
+      }
+    }
+
+    @keyframes okPop {
+      40% {
+        transform: scale(1.07)
+      }
+    }
+
+    .sym {
+      color: #ffe600;
+      font-weight: 900;
+      line-height: 1;
+      font-size: clamp(78px, 12.5vw, 112px);
+      text-shadow: 0 3px 0 #b58a00, 0 6px 14px rgba(0, 0, 0, .45);
+      display: grid;
+      place-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .sym svg {
+      width: 1em;
+      height: 1em;
+      display: block;
+      filter: drop-shadow(0 3px 0 #b58a00) drop-shadow(0 6px 8px rgba(0, 0, 0, .4))
+    }
+
+    .sym.idle {
+      font-size: clamp(30px, 5vw, 44px);
+      color: #ffd7d2;
+      text-shadow: none;
+      letter-spacing: .1em
+    }
+
+    .tone-hint {
+      height: 26px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffd666;
+      letter-spacing: .08em
+    }
+
+    .strikes {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      font-size: 14px;
+      color: #aab6e6
+    }
+
+    .strikes i {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .14);
+      border: 1px solid rgba(255, 255, 255, .25);
+      transition: all .15s
+    }
+
+    .strikes i.on {
+      background: var(--bad);
+      border-color: #ffb0b0;
+      box-shadow: 0 0 10px var(--bad)
+    }
+
+    .float {
+      position: absolute;
+      top: 14%;
+      left: calc(50% + clamp(100px, 14vw, 135px));
+      font-size: 34px;
+      font-weight: 900;
+      pointer-events: none;
+      animation: floatUp .85s ease-out forwards;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, .5)
+    }
+
+    .float.plus {
+      color: var(--good)
+    }
+
+    .float.minus {
+      color: var(--bad)
+    }
+
+    @keyframes floatUp {
+      from {
+        opacity: 1;
+        transform: translateY(10px)
+      }
+
+      to {
+        opacity: 0;
+        transform: translateY(-46px)
+      }
+    }
+
+    /* ---------- Keyboard ---------- */
+    .keyboard {
+      width: calc(var(--u) * 13.5);
+      margin: 0 auto
+    }
+
+    .krow {
+      display: flex
+    }
+
+    .key {
+      width: calc(var(--u) - 6px);
+      height: calc(var(--u) - 6px);
+      margin: 3px;
+      flex: none;
+      border-radius: calc(var(--u) * .17);
+      position: relative;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, var(--c1), var(--c2));
+      box-shadow: 0 4px 0 var(--c3), 0 7px 10px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 255, 255, .5);
+      transition: transform .08s, box-shadow .08s, filter .15s;
+    }
+
+    .key::before {
+      content: "";
+      position: absolute;
+      inset: 13%;
+      border-radius: calc(var(--u) * .12);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .8), rgba(255, 255, 255, .3));
+      box-shadow: inset 0 2px 3px rgba(0, 0, 0, .14);
+    }
+
+    .key.dead {
+      filter: saturate(.55) brightness(.8)
+    }
+
+    .cap {
+      position: relative;
+      z-index: 1;
+      font-weight: 900;
+      color: #1d3fb5;
+      line-height: 1;
+      font-size: calc(var(--u) * .46);
+      opacity: 0;
+      transition: opacity .12s;
+      display: grid;
+      place-items: center;
+    }
+
+    .cap svg {
+      width: 1em;
+      height: 1em;
+      display: block
+    }
+
+    .keyboard.show-all .cap {
+      opacity: .62
+    }
+
+    .key.target {
+      transform: translateY(-3px) scale(1.1);
+      z-index: 3;
+      animation: glow 1s ease-in-out infinite;
+    }
+
+    .key.target::before {
+      background: linear-gradient(180deg, #fff, #eaf0ff)
+    }
+
+    .key.target .cap {
+      opacity: 1;
+      font-size: calc(var(--u) * .5);
+      color: #1331b8
+    }
+
+    @keyframes glow {
+
+      0%,
+      100% {
+        box-shadow: 0 4px 0 var(--c3), 0 0 0 3px #fff, 0 0 14px 4px rgba(255, 255, 255, .55)
+      }
+
+      50% {
+        box-shadow: 0 4px 0 var(--c3), 0 0 0 3px #fff, 0 0 26px 10px rgba(255, 255, 255, .95)
+      }
+    }
+
+    .key.press {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 var(--c3), 0 3px 6px rgba(0, 0, 0, .4), inset 0 0 0 2px rgba(255, 255, 255, .5)
+    }
+
+    .key.target.press {
+      transform: translateY(0) scale(1.1)
+    }
+
+    .key.ok::before {
+      background: linear-gradient(180deg, #b8ffd3, #46e58a)
+    }
+
+    .key.bad::before {
+      background: linear-gradient(180deg, #ffc2c2, #ff5a5a)
+    }
+
+    /* 手指配色 */
+    .f-pL,
+    .f-pR {
+      --c1: #f8f9fc;
+      --c2: #c8cdd8;
+      --c3: #8c93a5;
+      --lc: #e8ecf8
+    }
+
+    .f-rL,
+    .f-rR {
+      --c1: #bdf5f5;
+      --c2: #5fcad1;
+      --c3: #2b8c96;
+      --lc: #6fe0e8
+    }
+
+    .f-mL,
+    .f-mR {
+      --c1: #f6c8f8;
+      --c2: #c673d4;
+      --c3: #85389a;
+      --lc: #e29cf0
+    }
+
+    .f-iL {
+      --c1: #fffbad;
+      --c2: #e2d34a;
+      --c3: #a09418;
+      --lc: #f5e85c
+    }
+
+    .f-iR {
+      --c1: #ffe3a3;
+      --c2: #f2a83a;
+      --c3: #b06f17;
+      --lc: #ffb54d
+    }
+
+    /* 手指標籤 */
+    .fingers {
+      display: flex;
+      margin: 8px auto 0;
+      width: calc(var(--u) * 13.5);
+      padding-left: calc(var(--u) * 2.5)
+    }
+
+    .flabel {
+      width: var(--u);
+      flex: none;
+      text-align: center;
+      font-weight: 800;
+      line-height: 1.12;
+      font-size: calc(var(--u) * .3);
+      color: var(--lc);
+      opacity: .78;
+      transition: all .15s;
+      padding: 3px 0;
+      border-radius: 10px;
+    }
+
+    .flabel.active {
+      opacity: 1;
+      transform: scale(1.16);
+      background: rgba(255, 255, 255, .12);
+      text-shadow: 0 0 12px var(--lc);
+      box-shadow: 0 0 0 1px var(--lc)
+    }
+
+    .hands {
+      display: flex;
+      width: calc(var(--u) * 13.5);
+      margin: 6px auto 0;
+      padding-left: calc(var(--u) * 2.5)
+    }
+
+    .hand {
+      width: calc(var(--u) * 5);
+      text-align: center;
+      font-size: calc(var(--u) * .24);
+      color: #9fb0e8;
+      border-top: 2px solid rgba(159, 176, 232, .45);
+      padding-top: 3px;
+      font-weight: 700;
+      letter-spacing: .3em;
+      margin: 0 2px;
+      transition: all .15s
+    }
+
+    .hand.active {
+      color: #fff;
+      border-top-color: #fff
+    }
+
+    /* ---------- Footer ---------- */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .restart {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      border: 0;
+      cursor: pointer;
+      color: #fff;
+      font: 800 14px/1.15 var(--font);
+      background: radial-gradient(circle at 50% 30%, #ff7a68, #d3202b 60%, #8f1118);
+      box-shadow: 0 0 0 4px #14172e, 0 0 0 6px #6f78d6, 0 8px 18px rgba(255, 60, 60, .4);
+      transition: transform .12s;
+    }
+
+    .restart:hover {
+      transform: scale(1.08)
+    }
+
+    .restart:active {
+      transform: scale(.95)
+    }
+
+    .restart.finish-early {
+      background: radial-gradient(circle at 50% 30%, #ffb347, #e67e22 60%, #935116);
+      box-shadow: 0 0 0 4px #14172e, 0 0 0 6px #f39c12, 0 8px 18px rgba(243, 156, 18, .4);
+    }
+
+    .restart.finish-practice {
+      background: radial-gradient(circle at 50% 30%, #46e58a, #10ac84 60%, #0c6950);
+      box-shadow: 0 0 0 4px #14172e, 0 0 0 6px #2ed573, 0 8px 18px rgba(46, 213, 115, .4);
+    }
+
+    .chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap
+    }
+
+    .chip {
+      font: 700 15px var(--font);
+      color: #c9d6ff;
+      background: rgba(255, 255, 255, .07);
+      border: 1px solid rgba(255, 255, 255, .18);
+      padding: 9px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .chip:hover {
+      background: rgba(255, 255, 255, .14)
+    }
+
+    .chip[aria-pressed="true"] {
+      background: linear-gradient(180deg, #4f7dff, #3253d6);
+      color: #fff;
+      border-color: #9bb5ff;
+      box-shadow: 0 0 14px rgba(90, 130, 255, .5)
+    }
+
+    .ready-toggles {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0 18px;
+      flex-wrap: wrap;
+    }
+
+    .ready-toggles .chip {
+      padding: 9px 18px;
+      font-size: 15px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .credit {
+      font-size: 13px;
+      color: #7f8fc4;
+      margin-top: 14px;
+      text-align: center
+    }
+
+    /* ---------- Overlay / Panels ---------- */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(5, 8, 22, .74);
+      backdrop-filter: blur(6px);
+      z-index: 50;
+      padding: 16px;
+      overflow: auto
+    }
+
+    .overlay.show {
+      display: grid
+    }
+
+    .panel {
+      display: none;
+      width: min(580px, 100%);
+      padding: 30px 30px 28px;
+      border-radius: 28px;
+      text-align: center;
+      background: linear-gradient(160deg, rgba(44, 60, 120, .96), rgba(17, 23, 52, .97));
+      border: 1px solid rgba(255, 255, 255, .2);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .15);
+      animation: panelIn .25s ease;
+    }
+
+    .panel.show {
+      display: block
+    }
+
+    @keyframes panelIn {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(.96)
+      }
+    }
+
+    .panel h2 {
+      margin: 0 0 6px;
+      font-size: clamp(26px, 5vw, 36px);
+      font-weight: 900;
+      letter-spacing: .04em
+    }
+
+    .panel p {
+      margin: 8px 0;
+      color: #c9d6ff;
+      line-height: 1.7;
+      font-size: 17px
+    }
+
+    .rules {
+      list-style: none;
+      margin: 16px 0 22px;
+      padding: 0;
+      text-align: left;
+      display: grid;
+      gap: 8px
+    }
+
+    .rules li {
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .1);
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 16px;
+      color: #dce5ff
+    }
+
+    .rules b {
+      color: #ffd666
+    }
+
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px
+    }
+
+    .btn {
+      border: 0;
+      cursor: pointer;
+      font: 800 clamp(18px, 3.4vw, 22px) var(--font);
+      color: #fff;
+      padding: 13px 32px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #ff6e5f, #d3202b);
+      box-shadow: 0 6px 0 #8f1118, 0 14px 26px rgba(255, 70, 70, .35);
+      transition: transform .1s, box-shadow .1s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px)
+    }
+
+    .btn:active {
+      transform: translateY(5px);
+      box-shadow: 0 1px 0 #8f1118, 0 4px 10px rgba(255, 70, 70, .3)
+    }
+
+    .btn.blue {
+      background: linear-gradient(180deg, #5b86ff, #2f4fd1);
+      box-shadow: 0 6px 0 #1d2f87, 0 14px 26px rgba(70, 110, 255, .35)
+    }
+
+    .btn.blue:active {
+      box-shadow: 0 1px 0 #1d2f87, 0 4px 10px rgba(70, 110, 255, .3)
+    }
+
+    .btn.ghost {
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .25);
+      box-shadow: 0 5px 0 rgba(0, 0, 0, .35), 0 10px 20px rgba(0, 0, 0, .25);
+      color: #dce5ff;
+    }
+
+    .btn.ghost:hover {
+      background: rgba(255, 255, 255, .16)
+    }
+
+    .btn.ghost:active {
+      box-shadow: 0 1px 0 rgba(0, 0, 0, .35), 0 4px 8px rgba(0, 0, 0, .2)
+    }
+
+    .btn.sm {
+      font-size: 15px;
+      padding: 8px 18px;
+      box-shadow: 0 3px 0 rgba(0, 0, 0, .35)
+    }
+
+    .btn.sm:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, .35)
+    }
+
+    /* ---------- Mode Switch / Tabs ---------- */
+    .mode-tabs {
+      display: inline-flex;
+      background: rgba(0, 0, 0, .32);
+      padding: 5px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      gap: 6px;
+      margin: 6px 0 10px;
+    }
+
+    .mode-tab {
+      border: 0;
+      cursor: pointer;
+      font: 800 16px var(--font);
+      color: #aebce9;
+      background: transparent;
+      padding: 8px 22px;
+      border-radius: 999px;
+      transition: all .15s;
+    }
+
+    .mode-tab:hover {
+      color: #fff
+    }
+
+    .mode-tab.active {
+      background: linear-gradient(180deg, #5b86ff, #2f4fd1);
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(60, 100, 255, .45);
+    }
+
+    .h-badge.mode-zh {
+      background: rgba(160, 120, 255, .2);
+      color: #d0b8ff;
+      border-color: rgba(160, 120, 255, .4)
+    }
+
+    .h-badge.mode-en {
+      background: rgba(70, 229, 138, .18);
+      color: #6ff2a7;
+      border-color: rgba(70, 229, 138, .38)
+    }
+
+    /* ---------- Play Mode Switch (競賽 vs 練習) ---------- */
+    .play-mode-switch {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(0, 0, 0, .35);
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      gap: 4px;
+      margin: 4px auto 12px;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, .4);
+      max-width: 100%;
+    }
+
+    .play-mode-opt {
+      border: 0;
+      cursor: pointer;
+      font: 800 15px var(--font);
+      color: #aebce9;
+      background: transparent;
+      padding: 8px 20px;
+      border-radius: 999px;
+      transition: all .18s cubic-bezier(.2, .8, .2, 1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .play-mode-opt:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, .06)
+    }
+
+    .play-mode-opt.active {
+      color: #fff
+    }
+
+    .play-mode-opt[data-playmode="competition"].active {
+      background: linear-gradient(180deg, #ff6e5f, #d3202b);
+      box-shadow: 0 3px 12px rgba(255, 70, 70, .45);
+    }
+
+    .play-mode-opt[data-playmode="practice"].active {
+      background: linear-gradient(180deg, #2ed573, #10ac84);
+      box-shadow: 0 3px 12px rgba(46, 213, 115, .45);
+    }
+
+    .play-mode-opt .p-icon {
+      font-size: 16px;
+      line-height: 1
+    }
+
+    .hud-mode-pill {
+      font-size: 14px;
+      font-weight: 800;
+      padding: 6px 16px;
+      border-radius: 999px;
+      letter-spacing: .05em;
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(255, 255, 255, .18);
+      color: #c9d6ff;
+      backdrop-filter: blur(8px);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s;
+    }
+
+    .hud-mode-pill.practice {
+      background: rgba(46, 213, 115, .16);
+      border-color: rgba(46, 213, 115, .38);
+      color: #6ff2a7;
+      box-shadow: 0 0 12px rgba(46, 213, 115, .2);
+    }
+
+    .hud-mode-pill.competition {
+      background: rgba(255, 110, 95, .16);
+      border-color: rgba(255, 110, 95, .38);
+      color: #ff9e94;
+      box-shadow: 0 0 12px rgba(255, 110, 95, .2);
+    }
+
+    .done-note {
+      margin: 12px 0 16px;
+      font-size: 15px;
+      color: #9fb0e8;
+      padding: 10px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .1);
+      line-height: 1.5;
+    }
+
+    .done-note.practice {
+      color: #a3f5ce;
+      background: rgba(46, 213, 115, .12);
+      border-color: rgba(46, 213, 115, .3)
+    }
+
+    .done-note.competition {
+      color: #ffe0a0;
+      background: rgba(255, 180, 70, .12);
+      border-color: rgba(255, 180, 70, .3)
+    }
+
+    /* ---------- History Panel ---------- */
+    .panel.wide {
+      width: min(660px, 100%)
+    }
+
+    .history-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 14px 0
+    }
+
+    .history-list {
+      max-height: 310px;
+      overflow-y: auto;
+      margin: 12px 0 18px;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .history-list::-webkit-scrollbar {
+      width: 6px
+    }
+
+    .history-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, .25);
+      border-radius: 99px
+    }
+
+    .h-item {
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .h-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .h-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .h-date {
+      font-size: 13px;
+      color: #9fb0e8
+    }
+
+    .h-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: rgba(138, 184, 255, .18);
+      color: #8ab8ff;
+      border: 1px solid rgba(138, 184, 255, .35)
+    }
+
+    .h-badge.early {
+      background: rgba(255, 180, 70, .18);
+      color: #ffc670;
+      border-color: rgba(255, 180, 70, .35)
+    }
+
+    .h-detail {
+      font-size: 14px;
+      color: #dce5ff;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    .h-detail .g {
+      color: var(--good);
+      font-weight: 700
+    }
+
+    .h-detail .r {
+      color: var(--bad);
+      font-weight: 700
+    }
+
+    .h-score {
+      font-size: 28px;
+      font-weight: 900;
+      color: #8ab8ff;
+      font-variant-numeric: tabular-nums;
+      text-align: right
+    }
+
+    .h-score small {
+      font-size: 14px;
+      color: #c9d6ff;
+      margin-left: 3px
+    }
+
+    .h-empty {
+      padding: 36px 16px;
+      color: #9fb0e8;
+      font-size: 16px;
+      text-align: center;
+      background: rgba(255, 255, 255, .04);
+      border-radius: 16px;
+      border: 1px dashed rgba(255, 255, 255, .15)
+    }
+
+    .panel.warn {
+      border-color: #ff6b6b;
+      box-shadow: 0 0 0 4px rgba(255, 90, 90, .25), 0 30px 80px rgba(0, 0, 0, .6);
+      animation: panelIn .25s ease, warnBlink 1s ease-in-out infinite alternate
+    }
+
+    @keyframes warnBlink {
+      to {
+        box-shadow: 0 0 0 10px rgba(255, 90, 90, .12), 0 30px 80px rgba(0, 0, 0, .6)
+      }
+    }
+
+    .warn .big {
+      font-size: clamp(44px, 9vw, 68px);
+      font-weight: 900;
+      color: #ff6b6b;
+      letter-spacing: .06em;
+      margin: 0 0 4px;
+      text-shadow: 0 0 24px rgba(255, 80, 80, .55)
+    }
+
+    .warn .sign {
+      font-size: 54px;
+      line-height: 1
+    }
+
+    .final {
+      font-size: clamp(52px, 11vw, 84px);
+      font-weight: 900;
+      color: #8ab8ff;
+      line-height: 1.1;
+      margin: 4px 0 0;
+      font-variant-numeric: tabular-nums
+    }
+
+    .final small {
+      font-size: .32em;
+      margin-left: 8px;
+      color: #c9d6ff
+    }
+
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 18px 0 14px
+    }
+
+    .tile {
+      background: rgba(255, 255, 255, .07);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 16px;
+      padding: 12px 6px
+    }
+
+    .tile span {
+      display: block;
+      font-size: 14px;
+      color: #aebce9
+    }
+
+    .tile b {
+      display: block;
+      font-size: 30px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums
+    }
+
+    .tile.g b {
+      color: var(--good)
+    }
+
+    .tile.r b {
+      color: var(--bad)
+    }
+
+    .bar {
+      display: flex;
+      height: 22px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .1);
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, .4)
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      transition: width .7s cubic-bezier(.2, .8, .2, 1);
+      width: 0
+    }
+
+    .bar .g {
+      background: linear-gradient(180deg, #7bf5b0, #2fc774)
+    }
+
+    .bar .r {
+      background: linear-gradient(180deg, #ff8f8f, #e04444)
+    }
+
+    .ratio {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 800;
+      margin-top: 8px;
+      font-size: 17px
+    }
+
+    .ratio .g {
+      color: var(--good)
+    }
+
+    .ratio .r {
+      color: var(--bad)
+    }
+
+    .extra {
+      margin: 14px 0 6px;
+      font-size: 15px;
+      color: #b5c3f2;
+      line-height: 1.8
+    }
+
+    .comment {
+      font-weight: 800;
+      color: #ffd666;
+      font-size: 18px;
+      margin: 10px 0 14px
+    }
+
+    .missed-sym {
+      display: inline-grid;
+      place-items: center;
+      min-width: 1.7em;
+      height: 1.7em;
+      padding: 0 .3em;
+      margin: 0 3px;
+      border-radius: 9px;
+      background: rgba(255, 90, 90, .18);
+      border: 1px solid rgba(255, 120, 120, .4);
+      color: #ffd0d0;
+      font-weight: 900;
+      font-size: 19px;
+      vertical-align: middle
+    }
+
+    .missed-sym svg {
+      width: 1em;
+      height: 1em;
+      display: block
+    }
+
+    @media (max-width:560px) {
+      .app {
+        padding: 10px 8px 20px
+      }
+
+      .stage {
+        --u: min(calc((100vw - 16px) / 13.5), 66px)
+      }
+
+      .card {
+        padding: 6px 14px
+      }
+
+      .panel {
+        padding: 22px 18px
+      }
+
+      .play-mode-opt {
+        padding: 6px 14px;
+        font-size: 14px
+      }
+
+      .hud-mode-pill {
+        order: -1;
+        margin: 0 auto
+      }
+    }
+  </style>
 </head>
+
 <body>
-<div class="app">
-  <header class="hud">
-    <div class="card"><span class="label">剩餘時間:</span><span class="val" id="time">200</span></div>
-    <div class="card"><span class="label">目前得</span><span class="val" id="score">0</span><span class="unit">分</span></div>
-  </header>
+  <div class="app">
+    <header class="hud">
+      <div class="card"><span class="label" id="timeLabel">剩餘時間:</span><span class="val" id="time">200</span><span
+          class="unit" id="timeUnit">秒</span></div>
+      <div class="hud-mode-pill" id="hudModePill">🏆 競賽模式</div>
+      <div class="card"><span class="label">目前得</span><span class="val" id="score">0</span><span class="unit">分</span>
+      </div>
+    </header>
 
-  <main class="stage" id="stage">
-    <h1 style="position:absolute;left:-9999px">注音綜合打字練習</h1>
-    <div class="orb-wrap" id="orbWrap">
-      <div class="orb" id="orb"><div class="sym idle" id="sym">準備</div></div>
-      <div class="tone-hint" id="toneHint"></div>
-      <div class="strikes" id="strikes" title="連續打錯 5 次會暫停計時">連錯 <i></i><i></i><i></i><i></i><i></i></div>
-    </div>
+    <main class="stage" id="stage">
+      <h1 style="position:absolute;left:-9999px">注音綜合打字練習</h1>
+      <div class="orb-wrap" id="orbWrap">
+        <div class="orb" id="orb">
+          <div class="sym idle" id="sym">準備</div>
+        </div>
+        <div class="tone-hint" id="toneHint"></div>
+        <div class="strikes" id="strikes" title="連續打錯 5 次會暫停計時">連錯 <i></i><i></i><i></i><i></i><i></i></div>
+      </div>
 
-    <div class="keyboard" id="keyboard"></div>
-    <div class="fingers" id="fingers"></div>
-    <div class="hands"><div class="hand" id="handL">左手</div><div class="hand" id="handR">右手</div></div>
-  </main>
+      <div class="keyboard" id="keyboard"></div>
+      <div class="fingers" id="fingers"></div>
+      <div class="hands">
+        <div class="hand" id="handL">左手</div>
+        <div class="hand" id="handR">右手</div>
+      </div>
+    </main>
 
-  <div class="footer">
-    <div class="footer-left">
-      <button class="restart" id="restartBtn" tabindex="-1" title="回到開始畫面">重新<br>測驗</button>
-      <button class="restart finish-early" id="earlyFinishBtn" tabindex="-1" title="提前結算並儲存目前成績">提早<br>結束</button>
+    <div class="footer">
+      <div class="footer-left">
+        <button class="restart" id="restartBtn" tabindex="-1" title="回到開始畫面">離開<br>測驗</button>
+        <button class="restart finish-early" id="earlyFinishBtn" tabindex="-1" title="提前結算並儲存目前成績">提早<br>結束</button>
+      </div>
+      <div class="chips">
+        <button class="chip" id="showAllBtn" tabindex="-1" aria-pressed="true">⌨️ 顯示全部字母</button>
+        <button class="chip" id="soundBtn" tabindex="-1" aria-pressed="true">🔊 使用音效</button>
+      </div>
     </div>
-    <div class="chips">
-      <button class="chip" id="showAllBtn" tabindex="-1" aria-pressed="false">提示全部按鍵</button>
-      <button class="chip" id="soundBtn" tabindex="-1" aria-pressed="true">音效</button>
-    </div>
+    <div class="credit">致敬「為為的快打高手」· 注音綜合練習(純 HTML + JavaScript)</div>
   </div>
-  <div class="credit">致敬「為為的快打高手」· 注音綜合練習(純 HTML + JavaScript)</div>
-</div>
 
-<div class="overlay show" id="overlay">
-  <!-- 準備開始 -->
-  <section class="panel show" id="pReady">
-    <h2 id="readyTitle">注音綜合練習</h2>
-    <div class="mode-tabs" role="tablist" aria-label="練習模式選擇">
-      <button class="mode-tab active" data-mode="zhuyin" tabindex="-1">ㄅㄆㄇ 注音練習</button>
-      <button class="mode-tab" data-mode="english" tabindex="-1">ABC 英打練習</button>
-    </div>
-    <p id="readyDesc">37 個注音符號 + 4 個聲調符號(˙ ˊ ˇ ˋ)</p>
-    <ul class="rules">
-      <li>⏱ 共 <b>200 秒</b>,按下「開始」才會開始倒數</li>
-      <li>✅ 打對 <b>+500</b> 分 ・ ❌ 打錯 <b>−50</b> 分</li>
-      <li>🚫 連續打錯 <b>5 次</b>會暫停計時,需點擊畫面才能繼續</li>
-      <li>🖐 鍵盤顏色對應手指,目標符號會顯示在對應的按鍵上</li>
-    </ul>
-    <div class="btn-group">
-      <button class="btn" id="startBtn" tabindex="-1">準備好了,開始!</button>
-      <button class="btn ghost" id="historyFromReadyBtn" tabindex="-1">📜 歷史紀錄</button>
-    </div>
-  </section>
+  <div class="overlay show" id="overlay">
+    <!-- 準備開始 -->
+    <section class="panel show" id="pReady">
+      <h2 id="readyTitle">注音綜合練習</h2>
+      <div class="mode-tabs" role="tablist" aria-label="練習模式選擇">
+        <button class="mode-tab active" data-mode="zhuyin" tabindex="-1">ㄅㄆㄇ 注音練習</button>
+        <button class="mode-tab" data-mode="english" tabindex="-1">ABC 英打練習</button>
+      </div>
+      <div class="play-mode-switch" role="radiogroup" aria-label="競賽或練習模式選擇">
+        <button class="play-mode-opt active" data-playmode="competition" role="radio" aria-checked="true" tabindex="-1">
+          <span class="p-icon">🏆</span>
+          <span class="p-text">競賽模式</span>
+        </button>
+        <button class="play-mode-opt" data-playmode="practice" role="radio" aria-checked="false" tabindex="-1">
+          <span class="p-icon">🌱</span>
+          <span class="p-text">練習模式</span>
+        </button>
+      </div>
+      <p id="readyDesc">37 個注音符號 + 4 個聲調符號(˙ ˊ ˇ ˋ)</p>
+      <ul class="rules" id="readyRules"></ul>
+      <div class="ready-toggles">
+        <button class="chip" id="readyShowAllBtn" tabindex="-1" aria-pressed="false" type="button">⌨️ 顯示全部字母</button>
+        <button class="chip" id="readySoundBtn" tabindex="-1" aria-pressed="true" type="button">🔊 使用音效</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn" id="startBtn" tabindex="-1">準備好了,開始!</button>
+        <button class="btn ghost" id="historyFromReadyBtn" tabindex="-1">📜 歷史紀錄</button>
+      </div>
+    </section>
 
-  <!-- 連錯警告 -->
-  <section class="panel warn" id="pWarn">
-    <div class="sign">🚫</div>
-    <div class="big">不要亂按!</div>
-    <p>你已經連續打錯 5 次,計時已暫停。<br>請先看清楚紅色圓鈕的符號,再從鍵盤上找到亮起的按鍵與對應的手指。</p>
-    <div class="btn-group">
-      <button class="btn" id="resumeBtn" tabindex="-1">我知道了,繼續</button>
-      <button class="btn ghost" id="warnEarlyFinishBtn" tabindex="-1">提早結束</button>
-    </div>
-  </section>
+    <!-- 連錯警告 -->
+    <section class="panel warn" id="pWarn">
+      <div class="sign">🚫</div>
+      <div class="big">不要亂按!</div>
+      <p>你已經連續打錯 5 次,計時已暫停。<br>請先看清楚紅色圓鈕的符號,再從鍵盤上找到亮起的按鍵與對應的手指。</p>
+      <div class="btn-group">
+        <button class="btn" id="resumeBtn" tabindex="-1">我知道了,繼續</button>
+        <button class="btn ghost" id="warnEarlyFinishBtn" tabindex="-1">提早結束</button>
+      </div>
+    </section>
 
-  <!-- 結算 -->
-  <section class="panel" id="pDone">
-    <h2 id="doneTitle">時間到!</h2>
-    <div class="final"><span id="rScore">0</span><small>分</small></div>
-    <div class="tiles">
-      <div class="tile g"><span>打對</span><b id="rRight">0</b></div>
-      <div class="tile r"><span>打錯</span><b id="rWrong">0</b></div>
-      <div class="tile"><span>總按鍵</span><b id="rTotal">0</b></div>
-    </div>
-    <div class="bar"><i class="g" id="barG"></i><i class="r" id="barR"></i></div>
-    <div class="ratio"><span class="g" id="pctG">對 0%</span><span class="r" id="pctR">錯 0%</span></div>
-    <div class="extra" id="rExtra"></div>
-    <div class="comment" id="rComment"></div>
-    <div class="btn-group">
-      <button class="btn blue" id="againBtn" tabindex="-1">再練一次</button>
-      <button class="btn ghost" id="historyFromDoneBtn" tabindex="-1">📜 歷史紀錄</button>
-    </div>
-  </section>
+    <!-- 結算 -->
+    <section class="panel" id="pDone">
+      <h2 id="doneTitle">時間到!</h2>
+      <div class="final"><span id="rScore">0</span><small>分</small></div>
+      <div class="tiles">
+        <div class="tile g"><span>打對</span><b id="rRight">0</b></div>
+        <div class="tile r"><span>打錯</span><b id="rWrong">0</b></div>
+        <div class="tile"><span>總按鍵</span><b id="rTotal">0</b></div>
+      </div>
+      <div class="bar"><i class="g" id="barG"></i><i class="r" id="barR"></i></div>
+      <div class="ratio"><span class="g" id="pctG">對 0%</span><span class="r" id="pctR">錯 0%</span></div>
+      <div class="extra" id="rExtra"></div>
+      <div class="comment" id="rComment"></div>
+      <div class="done-note" id="doneNote"></div>
+      <div class="btn-group">
+        <button class="btn blue" id="againBtn" tabindex="-1">再練一次</button>
+        <button class="btn ghost" id="historyFromDoneBtn" tabindex="-1">📜 歷史紀錄</button>
+      </div>
+    </section>
 
-  <!-- 歷史紀錄 -->
-  <section class="panel wide" id="pHistory">
-    <h2>📜 練習歷史紀錄</h2>
-    <div class="mode-tabs" role="tablist" aria-label="歷史紀錄篩選">
-      <button class="mode-tab active" data-hfilter="all" tabindex="-1">全部</button>
-      <button class="mode-tab" data-hfilter="zhuyin" tabindex="-1">注音</button>
-      <button class="mode-tab" data-hfilter="english" tabindex="-1">英打</button>
-    </div>
-    <div class="history-stats">
-      <div class="tile"><span>累計場次</span><b id="hCount">0</b></div>
-      <div class="tile g"><span>最高分數</span><b id="hBest">0</b></div>
-      <div class="tile"><span>平均正確率</span><b id="hAvgAcc">—</b></div>
-    </div>
-    <div class="history-list" id="historyList"></div>
-    <div class="btn-group">
-      <button class="btn blue" id="historyBackBtn" tabindex="-1">返回</button>
-      <button class="btn ghost sm" id="clearHistoryBtn" tabindex="-1">清除紀錄</button>
-    </div>
-  </section>
-</div>
+    <!-- 歷史紀錄 -->
+    <section class="panel wide" id="pHistory">
+      <h2>📜 快打歷史紀錄</h2>
+      <div class="mode-tabs" role="tablist" aria-label="歷史紀錄篩選">
+        <button class="mode-tab active" data-hfilter="all" tabindex="-1">全部</button>
+        <button class="mode-tab" data-hfilter="zhuyin" tabindex="-1">注音</button>
+        <button class="mode-tab" data-hfilter="english" tabindex="-1">英打</button>
+      </div>
+      <div class="history-stats">
+        <div class="tile"><span>累計場次</span><b id="hCount">0</b></div>
+        <div class="tile g"><span>最高分數</span><b id="hBest">0</b></div>
+        <div class="tile"><span>平均正確率</span><b id="hAvgAcc">—</b></div>
+      </div>
+      <div class="history-list" id="historyList"></div>
+      <div class="btn-group">
+        <button class="btn blue" id="historyBackBtn" tabindex="-1">返回</button>
+        <button class="btn ghost sm" id="clearHistoryBtn" tabindex="-1">清除紀錄</button>
+      </div>
+    </section>
+  </div>
 
-<script>
-(() => {
-  'use strict';
+  <script>
+    (() => {
+      'use strict';
 
-  /* ===== 參數 ===== */
-  const GAME_SECONDS = 200;
-  const SCORE_RIGHT = 500;
-  const SCORE_WRONG = 50;
-  const STRIKE_LIMIT = 5;
+      /* ===== 參數 ===== */
+      const GAME_SECONDS = 200;
+      const SCORE_RIGHT = 500;
+      const SCORE_WRONG = 50;
+      const STRIKE_LIMIT = 5;
 
-  /* ===== 模式與鍵盤對應(以實體按鍵 code 判斷,不受輸入法/大小寫影響) ===== */
-  const ZHUYIN_MAP = {
-    Digit1:'ㄅ', Digit2:'ㄉ', Digit3:'ˇ', Digit4:'ˋ', Digit5:'ㄓ', Digit6:'ˊ', Digit7:'˙', Digit8:'ㄚ', Digit9:'ㄞ', Digit0:'ㄢ', Minus:'ㄦ',
-    KeyQ:'ㄆ', KeyW:'ㄊ', KeyE:'ㄍ', KeyR:'ㄐ', KeyT:'ㄔ', KeyY:'ㄗ', KeyU:'ㄧ', KeyI:'ㄛ', KeyO:'ㄟ', KeyP:'ㄣ',
-    KeyA:'ㄇ', KeyS:'ㄋ', KeyD:'ㄎ', KeyF:'ㄑ', KeyG:'ㄕ', KeyH:'ㄘ', KeyJ:'ㄨ', KeyK:'ㄜ', KeyL:'ㄠ', Semicolon:'ㄤ',
-    KeyZ:'ㄈ', KeyX:'ㄌ', KeyC:'ㄏ', KeyV:'ㄒ', KeyB:'ㄖ', KeyN:'ㄙ', KeyM:'ㄩ', Comma:'ㄝ', Period:'ㄡ', Slash:'ㄥ'
-  };
-  const ENGLISH_MAP = {
-    KeyQ:'Q', KeyW:'W', KeyE:'E', KeyR:'R', KeyT:'T', KeyY:'Y', KeyU:'U', KeyI:'I', KeyO:'O', KeyP:'P',
-    KeyA:'A', KeyS:'S', KeyD:'D', KeyF:'F', KeyG:'G', KeyH:'H', KeyJ:'J', KeyK:'K', KeyL:'L',
-    KeyZ:'Z', KeyX:'X', KeyC:'C', KeyV:'V', KeyB:'B', KeyN:'N', KeyM:'M'
-  };
-  const MODES = {
-    zhuyin: {
-      title: '注音綜合練習',
-      desc: '37 個注音符號 + 4 個聲調符號(˙ ˊ ˇ ˋ)',
-      badge: '注音',
-      badgeCls: 'mode-zh',
-      code2sym: ZHUYIN_MAP,
-      sym2code: Object.fromEntries(Object.entries(ZHUYIN_MAP).map(([c, s]) => [s, c])),
-      symbols: Object.values(ZHUYIN_MAP)
-    },
-    english: {
-      title: '英打字母練習',
-      desc: '26 個英文字母 (A ~ Z) 指法位置練習',
-      badge: '英打',
-      badgeCls: 'mode-en',
-      code2sym: ENGLISH_MAP,
-      sym2code: Object.fromEntries(Object.entries(ENGLISH_MAP).map(([c, s]) => [s, c])),
-      symbols: Object.values(ENGLISH_MAP)
-    }
-  };
-  let currentMode = 'zhuyin';
+      /* ===== 模式與鍵盤對應(以實體按鍵 code 判斷,不受輸入法/大小寫影響) ===== */
+      const ZHUYIN_MAP = {
+        Digit1: 'ㄅ', Digit2: 'ㄉ', Digit3: 'ˇ', Digit4: 'ˋ', Digit5: 'ㄓ', Digit6: 'ˊ', Digit7: '˙', Digit8: 'ㄚ', Digit9: 'ㄞ', Digit0: 'ㄢ', Minus: 'ㄦ',
+        KeyQ: 'ㄆ', KeyW: 'ㄊ', KeyE: 'ㄍ', KeyR: 'ㄐ', KeyT: 'ㄔ', KeyY: 'ㄗ', KeyU: 'ㄧ', KeyI: 'ㄛ', KeyO: 'ㄟ', KeyP: 'ㄣ',
+        KeyA: 'ㄇ', KeyS: 'ㄋ', KeyD: 'ㄎ', KeyF: 'ㄑ', KeyG: 'ㄕ', KeyH: 'ㄘ', KeyJ: 'ㄨ', KeyK: 'ㄜ', KeyL: 'ㄠ', Semicolon: 'ㄤ',
+        KeyZ: 'ㄈ', KeyX: 'ㄌ', KeyC: 'ㄏ', KeyV: 'ㄒ', KeyB: 'ㄖ', KeyN: 'ㄙ', KeyM: 'ㄩ', Comma: 'ㄝ', Period: 'ㄡ', Slash: 'ㄥ'
+      };
+      const ENGLISH_MAP = {
+        KeyQ: 'Q', KeyW: 'W', KeyE: 'E', KeyR: 'R', KeyT: 'T', KeyY: 'Y', KeyU: 'U', KeyI: 'I', KeyO: 'O', KeyP: 'P',
+        KeyA: 'A', KeyS: 'S', KeyD: 'D', KeyF: 'F', KeyG: 'G', KeyH: 'H', KeyJ: 'J', KeyK: 'K', KeyL: 'L',
+        KeyZ: 'Z', KeyX: 'X', KeyC: 'C', KeyV: 'V', KeyB: 'B', KeyN: 'N', KeyM: 'M'
+      };
+      const MODES = {
+        zhuyin: {
+          title: '注音綜合練習',
+          desc: '37 個注音符號 + 4 個聲調符號(˙ ˊ ˇ ˋ)',
+          badge: '注音',
+          badgeCls: 'mode-zh',
+          code2sym: ZHUYIN_MAP,
+          sym2code: Object.fromEntries(Object.entries(ZHUYIN_MAP).map(([c, s]) => [s, c])),
+          symbols: Object.values(ZHUYIN_MAP)
+        },
+        english: {
+          title: '英打字母練習',
+          desc: '26 個英文字母 (A ~ Z) 指法位置練習',
+          badge: '英打',
+          badgeCls: 'mode-en',
+          code2sym: ENGLISH_MAP,
+          sym2code: Object.fromEntries(Object.entries(ENGLISH_MAP).map(([c, s]) => [s, c])),
+          symbols: Object.values(ENGLISH_MAP)
+        }
+      };
+      let currentMode = 'zhuyin';
 
-  /* 聲調符號用 SVG 繪製,確保在任何字型下都置中且清楚 */
-  const svg = d => `<svg viewBox="0 0 100 100" aria-hidden="true">${d}</svg>`;
-  const stroke = p => `<path d="${p}" fill="none" stroke="currentColor" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;
-  const TONE_SVG = {
-    'ˊ': svg(stroke('M30 80 L70 20')),
-    'ˇ': svg(stroke('M20 26 L50 78 L80 26')),
-    'ˋ': svg(stroke('M30 20 L70 80')),
-    '˙': svg('<circle cx="50" cy="50" r="13" fill="currentColor"/>')
-  };
-  const TONE_NAME = {'ˊ':'二聲', 'ˇ':'三聲', 'ˋ':'四聲', '˙':'輕聲'};
-  function renderSym(sym, node){
-    if (TONE_SVG[sym]) node.innerHTML = TONE_SVG[sym]; else node.textContent = sym;
-  }
+      /* 聲調符號用 SVG 繪製,確保在任何字型下都置中且清楚 */
+      const svg = d => `<svg viewBox="0 0 100 100" aria-hidden="true">${d}</svg>`;
+      const stroke = p => `<path d="${p}" fill="none" stroke="currentColor" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const TONE_SVG = {
+        'ˊ': svg(stroke('M30 80 L70 20')),
+        'ˇ': svg(stroke('M20 26 L50 78 L80 26')),
+        'ˋ': svg(stroke('M30 20 L70 80')),
+        '˙': svg('<circle cx="50" cy="50" r="13" fill="currentColor"/>')
+      };
+      const TONE_NAME = { 'ˊ': '二聲', 'ˇ': '三聲', 'ˋ': '四聲', '˙': '輕聲' };
+      function renderSym(sym, node) {
+        if (TONE_SVG[sym]) node.innerHTML = TONE_SVG[sym]; else node.textContent = sym;
+      }
 
-  /* ===== 鍵盤版面與手指分配 ===== */
-  const FINGER = {
-    pL:{name:['小','指']},       rL:{name:['無名','指']}, mL:{name:['中','指']}, iL:{name:['食','指']},
-    iR:{name:['食','指']},       mR:{name:['中','指']},   rR:{name:['無名','指']}, pR:{name:['小','指']}
-  };
-  const ROWS = [
-    {offset:0,   keys:['Backquote','Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8','Digit9','Digit0','Minus','Equal'],
-                 fingers:['pL','pL','rL','mL','iL','iL','iR','iR','mR','rR','pR','pR','pR']},
-    {offset:1.5, keys:['KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP','BracketLeft','BracketRight'],
-                 fingers:['pL','rL','mL','iL','iL','iR','iR','mR','rR','pR','pR','pR']},
-    {offset:2,   keys:['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','Quote'],
-                 fingers:['pL','rL','mL','iL','iL','iR','iR','mR','rR','pR','pR']},
-    {offset:2.5, keys:['KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN','KeyM','Comma','Period','Slash','ShiftRight'],
-                 fingers:['pL','rL','mL','iL','iL','iR','iR','mR','rR','pR','pR']}
-  ];
-  const BOTTOM_LABELS = ['pL','rL','mL','iL','iL','iR','iR','mR','rR','pR'];
+      /* ===== 鍵盤版面與手指分配 ===== */
+      const FINGER = {
+        pL: { name: ['小', '指'] }, rL: { name: ['無名', '指'] }, mL: { name: ['中', '指'] }, iL: { name: ['食', '指'] },
+        iR: { name: ['食', '指'] }, mR: { name: ['中', '指'] }, rR: { name: ['無名', '指'] }, pR: { name: ['小', '指'] }
+      };
+      const ROWS = [
+        {
+          offset: 0, keys: ['Backquote', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'],
+          fingers: ['pL', 'pL', 'rL', 'mL', 'iL', 'iL', 'iR', 'iR', 'mR', 'rR', 'pR', 'pR', 'pR']
+        },
+        {
+          offset: 1.5, keys: ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'BracketLeft', 'BracketRight'],
+          fingers: ['pL', 'rL', 'mL', 'iL', 'iL', 'iR', 'iR', 'mR', 'rR', 'pR', 'pR', 'pR']
+        },
+        {
+          offset: 2, keys: ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'Quote'],
+          fingers: ['pL', 'rL', 'mL', 'iL', 'iL', 'iR', 'iR', 'mR', 'rR', 'pR', 'pR']
+        },
+        {
+          offset: 2.5, keys: ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash', 'ShiftRight'],
+          fingers: ['pL', 'rL', 'mL', 'iL', 'iL', 'iR', 'iR', 'mR', 'rR', 'pR', 'pR']
+        }
+      ];
+      const BOTTOM_LABELS = ['pL', 'rL', 'mL', 'iL', 'iL', 'iR', 'iR', 'mR', 'rR', 'pR'];
 
-  const $ = id => document.getElementById(id);
-  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+      const $ = id => document.getElementById(id);
+      const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
-  const keyboard = $('keyboard');
-  const keyEls = {};         // code -> element
-  const capEls = {};         // code -> cap element
-  const keyFinger = {};      // code -> finger id
-  ROWS.forEach(r => {
-    const row = el('div', 'krow');
-    row.style.marginLeft = `calc(var(--u) * ${r.offset})`;
-    r.keys.forEach((code, i) => {
-      const f = r.fingers[i];
-      const k = el('div', `key f-${f}`);
-      k.dataset.code = code;
-      const cap = el('span', 'cap');
-      k.append(cap);
-      row.append(k);
-      keyEls[code] = k;
-      capEls[code] = cap;
-      keyFinger[code] = f;
-    });
-    keyboard.append(row);
-  });
+      const keyboard = $('keyboard');
+      const keyEls = {};         // code -> element
+      const capEls = {};         // code -> cap element
+      const keyFinger = {};      // code -> finger id
+      ROWS.forEach(r => {
+        const row = el('div', 'krow');
+        row.style.marginLeft = `calc(var(--u) * ${r.offset})`;
+        r.keys.forEach((code, i) => {
+          const f = r.fingers[i];
+          const k = el('div', `key f-${f}`);
+          k.dataset.code = code;
+          const cap = el('span', 'cap');
+          k.append(cap);
+          row.append(k);
+          keyEls[code] = k;
+          capEls[code] = cap;
+          keyFinger[code] = f;
+        });
+        keyboard.append(row);
+      });
 
-  function applyModeToKeyboard(){
-    const map = MODES[currentMode].code2sym;
-    Object.keys(keyEls).forEach(code => {
-      const sym = map[code];
-      keyEls[code].classList.toggle('dead', !sym);
-      const cap = capEls[code];
-      if (sym) renderSym(sym, cap);
-      else cap.innerHTML = '';
-    });
-  }
-  function setMode(mode){
-    if (!MODES[mode]) return;
-    currentMode = mode;
-    $('readyTitle').textContent = MODES[mode].title;
-    $('readyDesc').textContent = MODES[mode].desc;
-    document.querySelectorAll('#pReady .mode-tab').forEach(b => {
-      b.classList.toggle('active', b.dataset.mode === mode);
-    });
-    applyModeToKeyboard();
-  }
+      function applyModeToKeyboard() {
+        const map = MODES[currentMode].code2sym;
+        Object.keys(keyEls).forEach(code => {
+          const sym = map[code];
+          keyEls[code].classList.toggle('dead', !sym);
+          const cap = capEls[code];
+          if (sym) renderSym(sym, cap);
+          else cap.innerHTML = '';
+        });
+      }
+      function setMode(mode) {
+        if (!MODES[mode]) return;
+        currentMode = mode;
+        $('readyTitle').textContent = MODES[mode].title;
+        $('readyDesc').textContent = MODES[mode].desc;
+        document.querySelectorAll('#pReady .mode-tab').forEach(b => {
+          b.classList.toggle('active', b.dataset.mode === mode);
+        });
+        applyModeToKeyboard();
+      }
 
-  const fingersBox = $('fingers');
-  const labelEls = BOTTOM_LABELS.map(f => {
-    const l = el('div', `flabel f-${f}`, FINGER[f].name.join('<br>'));
-    l.dataset.f = f;
-    fingersBox.append(l);
-    return l;
-  });
+      const fingersBox = $('fingers');
+      const labelEls = BOTTOM_LABELS.map(f => {
+        const l = el('div', `flabel f-${f}`, FINGER[f].name.join('<br>'));
+        l.dataset.f = f;
+        fingersBox.append(l);
+        return l;
+      });
 
-  /* ===== 狀態 ===== */
-  let state = 'ready';   // ready | playing | warn | done | history
-  let prevState = 'ready';
-  let remaining = GAME_SECONDS;
-  let elapsedMs = 0;
-  let score = 0, right = 0, wrong = 0, strikes = 0;
-  let target = null;
-  let missed = {};
-  let lastTick = performance.now();
-  const STORAGE_KEY = 'zhuyin_typing_history_v1';
+      /* ===== 狀態 ===== */
+      let state = 'ready';   // ready | playing | warn | done | history
+      let prevState = 'ready';
+      let remaining = GAME_SECONDS;
+      let elapsedMs = 0;
+      let score = 0, right = 0, wrong = 0, strikes = 0;
+      let target = null;
+      let missed = {};
+      let lastTick = performance.now();
+      const STORAGE_KEY = 'zhuyin_typing_history_v1';
+      const PLAY_MODE_STORAGE_KEY = 'zhuyin_typing_play_mode_v1';
+      const SHOW_ALL_STORAGE_KEY = 'zhuyin_typing_show_all_v1';
+      const SOUND_STORAGE_KEY = 'zhuyin_typing_sound_v1';
 
-  /* ===== 歷史紀錄 Storage ===== */
-  let historyFilter = 'all';
-  function loadHistory(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    }catch(e){ return []; }
-  }
-  function saveRecord(rec){
-    try{
-      const list = loadHistory();
-      list.unshift(rec);
-      if (list.length > 50) list.length = 50; // 最多保留最近 50 筆
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    }catch(e){}
-  }
-  function clearHistory(){
-    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
-    renderHistory();
-  }
-  function formatDate(ts){
-    const d = new Date(ts);
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-  function renderHistory(){
-    const allList = loadHistory();
-    const list = historyFilter === 'all'
-      ? allList
-      : allList.filter(r => (r.mode || 'zhuyin') === historyFilter);
-    $('hCount').textContent = list.length;
-    $('clearHistoryBtn').style.display = allList.length ? '' : 'none';
-    if (!list.length){
-      $('hBest').textContent = '0';
-      $('hAvgAcc').textContent = '—';
-      $('historyList').innerHTML = '<div class="h-empty">目前還沒有此類別的練習紀錄，快開始練習吧！</div>';
-      return;
-    }
-    const best = Math.max(...list.map(r => r.score));
-    const avgAcc = list.reduce((s, r) => s + (r.accuracy || 0), 0) / list.length;
-    $('hBest').textContent = best;
-    $('hAvgAcc').textContent = avgAcc.toFixed(1) + '%';
+      let playMode = 'competition'; // 預設為競賽模式 ('competition' | 'practice')
+      try {
+        const savedPlayMode = localStorage.getItem(PLAY_MODE_STORAGE_KEY);
+        if (savedPlayMode === 'practice' || savedPlayMode === 'competition') {
+          playMode = savedPlayMode;
+        }
+      } catch (e) { }
 
-    const box = $('historyList');
-    box.innerHTML = '';
-    list.forEach(r => {
-      const item = el('div', 'h-item');
-      const mKey = r.mode || 'zhuyin';
-      const mInfo = MODES[mKey] || MODES.zhuyin;
-      const badgeCls = r.early ? 'h-badge early' : 'h-badge';
-      const badgeTxt = r.early ? `提早結束 (${r.duration}秒)` : `完整測驗 (${r.duration}秒)`;
-      const missedHtml = (r.topMissed && r.topMissed.length)
-        ? `<span>常錯: ${r.topMissed.map(([s, n]) => `${s}×${n}`).join(' ')}</span>`
-        : '';
-      item.innerHTML = `
+      let showAll = false;
+      try {
+        const savedShowAll = localStorage.getItem(SHOW_ALL_STORAGE_KEY);
+        if (savedShowAll !== null) {
+          showAll = savedShowAll === 'true';
+        }
+      } catch (e) { }
+
+      let soundOn = true;
+      try {
+        const savedSound = localStorage.getItem(SOUND_STORAGE_KEY);
+        if (savedSound !== null) {
+          soundOn = savedSound === 'true';
+        }
+      } catch (e) { }
+
+      function setShowAll(val) {
+        showAll = Boolean(val);
+        try {
+          localStorage.setItem(SHOW_ALL_STORAGE_KEY, showAll ? 'true' : 'false');
+        } catch (e) { }
+        keyboard.classList.toggle('show-all', showAll);
+        ['showAllBtn', 'readyShowAllBtn'].forEach(id => {
+          const btn = $(id);
+          if (btn) btn.setAttribute('aria-pressed', showAll ? 'true' : 'false');
+        });
+      }
+
+      function setSound(val) {
+        soundOn = Boolean(val);
+        try {
+          localStorage.setItem(SOUND_STORAGE_KEY, soundOn ? 'true' : 'false');
+        } catch (e) { }
+        ['soundBtn', 'readySoundBtn'].forEach(id => {
+          const btn = $(id);
+          if (btn) btn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+        });
+      }
+
+      /* ===== 歷史紀錄 Storage ===== */
+      let historyFilter = 'all';
+      function loadHistory() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) { return []; }
+      }
+      function saveRecord(rec) {
+        try {
+          const list = loadHistory();
+          list.unshift(rec);
+          if (list.length > 50) list.length = 50; // 最多保留最近 50 筆
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        } catch (e) { }
+      }
+      function clearHistory() {
+        try { localStorage.removeItem(STORAGE_KEY); } catch (e) { }
+        renderHistory();
+      }
+      function formatDate(ts) {
+        const d = new Date(ts);
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+      function renderHistory() {
+        const allList = loadHistory();
+        const list = historyFilter === 'all'
+          ? allList
+          : allList.filter(r => (r.mode || 'zhuyin') === historyFilter);
+        $('hCount').textContent = list.length;
+        $('clearHistoryBtn').style.display = allList.length ? '' : 'none';
+        if (!list.length) {
+          $('hBest').textContent = '0';
+          $('hAvgAcc').textContent = '—';
+          $('historyList').innerHTML = '<div class="h-empty">目前還沒有此類別的練習紀錄，快開始練習吧！</div>';
+          return;
+        }
+        const best = Math.max(...list.map(r => r.score));
+        const avgAcc = list.reduce((s, r) => s + (r.accuracy || 0), 0) / list.length;
+        $('hBest').textContent = best;
+        $('hAvgAcc').textContent = avgAcc.toFixed(1) + '%';
+
+        const box = $('historyList');
+        box.innerHTML = '';
+        list.forEach(r => {
+          const item = el('div', 'h-item');
+          const mKey = r.mode || 'zhuyin';
+          const mInfo = MODES[mKey] || MODES.zhuyin;
+          const badgeCls = r.early ? 'h-badge early' : 'h-badge';
+          const badgeTxt = r.early ? `提早結束 (${r.duration}秒)` : `完整測驗 (${r.duration}秒)`;
+          const missedHtml = (r.topMissed && r.topMissed.length)
+            ? `<span>常錯: ${r.topMissed.map(([s, n]) => `${s}×${n}`).join(' ')}</span>`
+            : '';
+          item.innerHTML = `
         <div class="h-main">
           <div class="h-top">
             <span class="h-date">${formatDate(r.ts)}</span>
@@ -598,289 +1580,402 @@ body{
         </div>
         <div class="h-score">${r.score}<small>分</small></div>
       `;
-      box.append(item);
-    });
-  }
-  function openHistory(from){
-    prevState = from;
-    state = 'history';
-    renderHistory();
-    showPanel('history');
-  }
-  function closeHistory(){
-    state = prevState;
-    showPanel(prevState);
-  }
+          box.append(item);
+        });
+      }
+      function openHistory(from) {
+        prevState = from;
+        state = 'history';
+        renderHistory();
+        showPanel('history');
+      }
+      function closeHistory() {
+        state = prevState;
+        showPanel(prevState);
+      }
 
-  /* ===== DOM 參考 ===== */
-  const timeEl = $('time'), scoreEl = $('score');
-  const orb = $('orb'), symEl = $('sym'), toneHint = $('toneHint');
-  const strikeDots = [...document.querySelectorAll('#strikes i')];
-  const overlay = $('overlay');
-  const panels = {ready:$('pReady'), warn:$('pWarn'), done:$('pDone'), history:$('pHistory')};
+      /* ===== DOM 參考 ===== */
+      const timeEl = $('time'), timeLabel = $('timeLabel'), timeUnit = $('timeUnit'), scoreEl = $('score');
+      const hudModePill = $('hudModePill');
+      const orb = $('orb'), symEl = $('sym'), toneHint = $('toneHint');
+      const strikeDots = [...document.querySelectorAll('#strikes i')];
+      const overlay = $('overlay');
+      const panels = { ready: $('pReady'), warn: $('pWarn'), done: $('pDone'), history: $('pHistory') };
 
-  function showPanel(name){
-    overlay.classList.add('show');
-    Object.entries(panels).forEach(([k, p]) => p.classList.toggle('show', k === name));
-  }
-  function hideOverlay(){ overlay.classList.remove('show'); }
+      function showPanel(name) {
+        overlay.classList.add('show');
+        Object.entries(panels).forEach(([k, p]) => p.classList.toggle('show', k === name));
+      }
+      function hideOverlay() { overlay.classList.remove('show'); }
 
-  function renderHUD(){
-    timeEl.textContent = Math.max(0, Math.ceil(remaining));
-    timeEl.classList.toggle('low', state === 'playing' && remaining <= 10);
-    scoreEl.textContent = score;
-    strikeDots.forEach((d, i) => d.classList.toggle('on', i < strikes));
-    const isPlayingOrWarn = state === 'playing' || state === 'warn';
-    $('earlyFinishBtn').style.display = isPlayingOrWarn ? '' : 'none';
-  }
+      function updatePlayModeUI() {
+        document.querySelectorAll('.play-mode-opt').forEach(btn => {
+          const isActive = btn.dataset.playmode === playMode;
+          btn.classList.toggle('active', isActive);
+          btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        });
 
-  /* ===== 音效 ===== */
-  let soundOn = true, ac = null;
-  function beep(freq, dur, type = 'sine', vol = .1, delay = 0){
-    if (!soundOn) return;
-    try{
-      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-      const t = ac.currentTime + delay;
-      const o = ac.createOscillator(), g = ac.createGain();
-      o.type = type; o.frequency.setValueAtTime(freq, t);
-      g.gain.setValueAtTime(vol, t);
-      g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-      o.connect(g).connect(ac.destination);
-      o.start(t); o.stop(t + dur + .03);
-    }catch(e){}
-  }
-  const sfx = {
-    ok(){ beep(880, .09, 'triangle', .1); beep(1318, .12, 'triangle', .08, .06); },
-    bad(){ beep(150, .2, 'sawtooth', .07); },
-    warn(){ beep(260, .22, 'square', .05); beep(200, .3, 'square', .05, .24); },
-    done(){ [523, 659, 784, 1046].forEach((f, i) => beep(f, .25, 'triangle', .09, i * .14)); }
-  };
+        const isPractice = playMode === 'practice';
+        hudModePill.className = 'hud-mode-pill ' + playMode;
+        hudModePill.innerHTML = isPractice ? '🌱 練習模式' : '🏆 競賽模式';
 
-  /* ===== 目標符號 ===== */
-  function clearTarget(){
-    document.querySelectorAll('.key.target').forEach(k => k.classList.remove('target'));
-    labelEls.forEach(l => l.classList.remove('active'));
-    $('handL').classList.remove('active'); $('handR').classList.remove('active');
-  }
-  function setTarget(sym){
-    clearTarget();
-    target = sym;
-    symEl.classList.remove('idle');
-    renderSym(sym, symEl);
-    toneHint.textContent = TONE_NAME[sym] ? `聲調:${TONE_NAME[sym]}` : '';
-    const code = MODES[currentMode].sym2code[sym], f = keyFinger[code];
-    keyEls[code].classList.add('target');
-    labelEls.forEach(l => l.classList.toggle('active', l.dataset.f === f));
-    $('handL').classList.toggle('active', f.endsWith('L'));
-    $('handR').classList.toggle('active', f.endsWith('R'));
-  }
-  function nextTarget(){
-    const syms = MODES[currentMode].symbols;
-    let s;
-    do { s = syms[Math.floor(Math.random() * syms.length)]; } while (s === target && syms.length > 1);
-    setTarget(s);
-  }
+        const rulesEl = $('readyRules');
+        if (rulesEl) {
+          rulesEl.innerHTML = isPractice ? `
+        <li>⏱ <b>無時間限制</b>，放鬆熟悉每個按鍵與手指指法</li>
+        <li>✅ 打對 <b>+500</b> 分 ・ ❌ 打錯 <b>−50</b> 分</li>
+        <li>🌱 結束時顯示本次統計數據，<b>不會存入歷史紀錄</b></li>
+        <li>🛑 隨時可點擊「<b>結束練習</b>」結算當次成果</li>
+      ` : `
+        <li>⏱ 限時 <b>200 秒</b> 挑戰，按下「開始」才會開始倒數</li>
+        <li>✅ 打對 <b>+500</b> 分 ・ ❌ 打錯 <b>−50</b> 分</li>
+        <li>🚫 連續打錯 <b>5 次</b>會暫停計時，需點擊畫面才能繼續</li>
+        <li>🏆 成績將<b>儲存至歷史紀錄</b>，可隨時查看表現與排行榜</li>
+        <li>🖐 鍵盤顏色對應手指，目標符號會顯示在對應的按鍵上</li>
+      `;
+        }
 
-  /* ===== 視覺回饋 ===== */
-  function flashKey(code, cls){
-    const k = keyEls[code]; if (!k) return;
-    k.classList.add('press', cls);
-    setTimeout(() => k.classList.remove('press', cls), 160);
-  }
-  function animate(node, cls){
-    node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls);
-    node.addEventListener('animationend', () => node.classList.remove(cls), {once:true});
-  }
-  function floatText(txt, cls){
-    const f = el('div', 'float ' + cls, txt);
-    $('orbWrap').append(f);
-    f.addEventListener('animationend', () => f.remove());
-  }
+        const startBtn = $('startBtn');
+        if (startBtn) {
+          startBtn.textContent = isPractice ? '準備好了,開始練習!' : '準備好了,開始競賽!';
+        }
 
-  /* ===== 遊戲流程 ===== */
-  function resetValues(){
-    remaining = GAME_SECONDS; elapsedMs = 0; score = 0; right = 0; wrong = 0; strikes = 0; target = null; missed = {};
-  }
-  function toReady(){
-    state = 'ready';
-    resetValues();
-    clearTarget();
-    symEl.classList.add('idle'); symEl.textContent = '準備';
-    toneHint.textContent = '';
-    renderHUD();
-    showPanel('ready');
-  }
-  function startGame(){
-    resetValues();
-    state = 'playing';
-    lastTick = performance.now();
-    hideOverlay();
-    nextTarget();
-    renderHUD();
-  }
-  function enterWarn(){
-    state = 'warn';
-    sfx.warn();
-    renderHUD();
-    showPanel('warn');
-  }
-  function resumeGame(){
-    strikes = 0;
-    state = 'playing';
-    lastTick = performance.now();
-    hideOverlay();
-    renderHUD();
-  }
-  function finishGame(isEarly = false){
-    state = 'done';
-    const usedSec = isEarly ? Math.max(1, Math.round(elapsedMs / 1000)) : GAME_SECONDS;
-    if (!isEarly) remaining = 0;
-    clearTarget();
-    renderHUD();
-    $('doneTitle').textContent = isEarly ? '提早結束!' : '時間到!';
-    const total = right + wrong;
-    const pr = total ? right / total * 100 : 0;
-    const pw = total ? wrong / total * 100 : 0;
-    $('rScore').textContent = score;
-    $('rRight').textContent = right;
-    $('rWrong').textContent = wrong;
-    $('rTotal').textContent = total;
-    $('barG').style.width = '0'; $('barR').style.width = '0';
-    $('pctG').textContent = total ? `對 ${pr.toFixed(1)}%` : '對 —';
-    $('pctR').textContent = total ? `錯 ${pw.toFixed(1)}%` : '錯 —';
-    const perMin = (right / usedSec * 60).toFixed(1);
-    const top = Object.entries(missed).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    let extra = `練習時間 <b style="color:#fff">${usedSec}</b> 秒 · 平均每分鐘打對 <b style="color:#fff">${perMin}</b> 個`;
-    if (top.length){
-      const chips = top.map(([s, n]) => {
-        const box = el('span', 'missed-sym'); renderSym(s, box);
-        return `${box.outerHTML}<small>×${n}</small>`;
-      }).join(' ');
-      extra += `<br>最常打錯:${chips}`;
-    }
-    $('rExtra').innerHTML = extra;
-    $('rComment').textContent =
-      !total ? '這次沒有按任何鍵喔,再試一次吧!' :
-      pr >= 95 ? '太厲害了,你已經是快打高手!' :
-      pr >= 85 ? '不錯喔!再練幾次會更穩。' :
-      pr >= 70 ? '繼續加油,多留意手指的分工。' :
-                 '別急,先看清楚手指位置,慢慢打也沒關係。';
+        const earlyBtn = $('earlyFinishBtn');
+        if (earlyBtn) {
+          earlyBtn.className = isPractice ? 'restart finish-early finish-practice' : 'restart finish-early';
+          earlyBtn.innerHTML = isPractice ? '結束<br>練習' : '提早<br>結束';
+          earlyBtn.title = isPractice ? '結束練習並查看本次統計數據' : '提前結算並儲存目前成績';
+        }
 
-    saveRecord({
-      ts: Date.now(),
-      mode: currentMode,
-      score,
-      right,
-      wrong,
-      total,
-      accuracy: Number(pr.toFixed(1)),
-      perMin: Number(perMin),
-      duration: usedSec,
-      early: Boolean(isEarly),
-      topMissed: top
-    });
+        const warnEarlyBtn = $('warnEarlyFinishBtn');
+        if (warnEarlyBtn) {
+          warnEarlyBtn.textContent = isPractice ? '結束練習' : '提早結束';
+        }
+      }
 
-    sfx.done();
-    showPanel('done');
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      $('barG').style.width = pr + '%'; $('barR').style.width = pw + '%';
-    }));
-  }
+      function setPlayMode(mode) {
+        if (mode !== 'competition' && mode !== 'practice') return;
+        playMode = mode;
+        try {
+          localStorage.setItem(PLAY_MODE_STORAGE_KEY, mode);
+        } catch (e) { }
+        updatePlayModeUI();
+        renderHUD();
+      }
 
-  function handleKey(code){
-    const sym = MODES[currentMode].code2sym[code];
-    if (sym === target){
-      right++; score += SCORE_RIGHT; strikes = 0;
-      flashKey(code, 'ok'); sfx.ok();
-      animate(orb, 'ok'); animate(scoreEl, 'bump');
-      floatText(`+${SCORE_RIGHT}`, 'plus');
-      nextTarget();
-      renderHUD();
-    } else {
-      wrong++; score -= SCORE_WRONG; strikes++;
-      missed[target] = (missed[target] || 0) + 1;
-      flashKey(code, 'bad'); sfx.bad();
-      animate(orb, 'shake');
-      floatText(`−${SCORE_WRONG}`, 'minus');
-      renderHUD();
-      if (strikes >= STRIKE_LIMIT) enterWarn();
-    }
-  }
+      function renderHUD() {
+        if (playMode === 'competition') {
+          timeLabel.textContent = '剩餘時間:';
+          timeEl.textContent = Math.max(0, Math.ceil(remaining));
+          timeEl.classList.remove('practice');
+          timeUnit.classList.remove('practice');
+          timeEl.classList.toggle('low', state === 'playing' && remaining <= 10);
+        } else {
+          timeLabel.textContent = '練習時間:';
+          timeEl.textContent = state === 'ready' ? 0 : Math.floor(elapsedMs / 1000);
+          timeEl.classList.add('practice');
+          timeUnit.classList.add('practice');
+          timeEl.classList.remove('low');
+        }
+        scoreEl.textContent = score;
+        const strikesWrap = $('strikes');
+        if (strikesWrap) {
+          strikesWrap.style.visibility = playMode === 'practice' ? 'hidden' : '';
+        }
+        strikeDots.forEach((d, i) => d.classList.toggle('on', i < strikes));
+        const isPlayingOrWarn = state === 'playing' || state === 'warn';
+        $('earlyFinishBtn').style.display = isPlayingOrWarn ? '' : 'none';
+      }
 
-  /* ===== 計時(僅在 playing 時扣時間;警告暫停時不扣) ===== */
-  setInterval(() => {
-    const now = performance.now();
-    const dt = now - lastTick; lastTick = now;
-    if (state !== 'playing') return;
-    elapsedMs += dt;
-    remaining = GAME_SECONDS - elapsedMs / 1000;
-    if (remaining <= 0){ remaining = 0; finishGame(); return; }
-    renderHUD();
-  }, 100);
+      /* ===== 音效 ===== */
+      let ac = null;
+      function beep(freq, dur, type = 'sine', vol = .1, delay = 0) {
+        if (!soundOn) return;
+        try {
+          ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+          const t = ac.currentTime + delay;
+          const o = ac.createOscillator(), g = ac.createGain();
+          o.type = type; o.frequency.setValueAtTime(freq, t);
+          g.gain.setValueAtTime(vol, t);
+          g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+          o.connect(g).connect(ac.destination);
+          o.start(t); o.stop(t + dur + .03);
+        } catch (e) { }
+      }
+      const sfx = {
+        ok() { beep(880, .09, 'triangle', .1); beep(1318, .12, 'triangle', .08, .06); },
+        bad() { beep(150, .2, 'sawtooth', .07); },
+        warn() { beep(260, .22, 'square', .05); beep(200, .3, 'square', .05, .24); },
+        done() { [523, 659, 784, 1046].forEach((f, i) => beep(f, .25, 'triangle', .09, i * .14)); }
+      };
 
-  /* ===== 事件 ===== */
-  window.addEventListener('keydown', e => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (state !== 'playing'){
-      if (e.code === 'Space' || e.code === 'Enter') e.preventDefault();  // 避免用鍵盤觸發按鈕,須用滑鼠點擊
-      return;
-    }
-    if (!MODES[currentMode].code2sym[e.code]) return;
-    e.preventDefault();
-    if (e.repeat) return;
-    handleKey(e.code);
-  }, true);
-  window.addEventListener('keyup', e => {
-    if (state !== 'playing' && (e.code === 'Space' || e.code === 'Enter')) e.preventDefault();
-  }, true);
+      /* ===== 目標符號 ===== */
+      function clearTarget() {
+        document.querySelectorAll('.key.target').forEach(k => k.classList.remove('target'));
+        labelEls.forEach(l => l.classList.remove('active'));
+        $('handL').classList.remove('active'); $('handR').classList.remove('active');
+      }
+      function setTarget(sym) {
+        clearTarget();
+        target = sym;
+        symEl.classList.remove('idle');
+        renderSym(sym, symEl);
+        toneHint.textContent = TONE_NAME[sym] ? `聲調:${TONE_NAME[sym]}` : '';
+        const code = MODES[currentMode].sym2code[sym], f = keyFinger[code];
+        keyEls[code].classList.add('target');
+        labelEls.forEach(l => l.classList.toggle('active', l.dataset.f === f));
+        $('handL').classList.toggle('active', f.endsWith('L'));
+        $('handR').classList.toggle('active', f.endsWith('R'));
+      }
+      function nextTarget() {
+        const syms = MODES[currentMode].symbols;
+        let s;
+        do { s = syms[Math.floor(Math.random() * syms.length)]; } while (s === target && syms.length > 1);
+        setTarget(s);
+      }
 
-  const press = (id, fn) => $(id).addEventListener('click', ev => { ev.currentTarget.blur(); fn(); });
-  press('startBtn', startGame);
-  press('resumeBtn', resumeGame);
-  press('againBtn', toReady);
-  press('restartBtn', toReady);
-  press('earlyFinishBtn', () => { if (state === 'playing' || state === 'warn') finishGame(true); });
-  press('warnEarlyFinishBtn', () => finishGame(true));
-  press('historyFromReadyBtn', () => openHistory('ready'));
-  press('historyFromDoneBtn', () => openHistory('done'));
-  press('historyBackBtn', closeHistory);
-  press('clearHistoryBtn', () => {
-    if (confirm('確定要清除所有歷史紀錄嗎？')) clearHistory();
-  });
+      /* ===== 視覺回饋 ===== */
+      function flashKey(code, cls) {
+        const k = keyEls[code]; if (!k) return;
+        k.classList.add('press', cls);
+        setTimeout(() => k.classList.remove('press', cls), 160);
+      }
+      function animate(node, cls) {
+        node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls);
+        node.addEventListener('animationend', () => node.classList.remove(cls), { once: true });
+      }
+      function floatText(txt, cls) {
+        const f = el('div', 'float ' + cls, txt);
+        $('orbWrap').append(f);
+        f.addEventListener('animationend', () => f.remove());
+      }
 
-  document.querySelectorAll('#pReady .mode-tab').forEach(btn => {
-    btn.addEventListener('click', ev => {
-      ev.currentTarget.blur();
-      setMode(btn.dataset.mode);
-    });
-  });
+      /* ===== 遊戲流程 ===== */
+      function resetValues() {
+        remaining = GAME_SECONDS; elapsedMs = 0; score = 0; right = 0; wrong = 0; strikes = 0; target = null; missed = {};
+      }
+      function toReady() {
+        state = 'ready';
+        resetValues();
+        clearTarget();
+        symEl.classList.add('idle'); symEl.textContent = '準備';
+        toneHint.textContent = '';
+        renderHUD();
+        showPanel('ready');
+      }
+      function startGame() {
+        resetValues();
+        state = 'playing';
+        lastTick = performance.now();
+        hideOverlay();
+        nextTarget();
+        renderHUD();
+      }
+      function enterWarn() {
+        state = 'warn';
+        sfx.warn();
+        renderHUD();
+        showPanel('warn');
+      }
+      function resumeGame() {
+        strikes = 0;
+        state = 'playing';
+        lastTick = performance.now();
+        hideOverlay();
+        renderHUD();
+      }
+      function finishGame(isEarly = false) {
+        state = 'done';
+        const isPractice = playMode === 'practice';
+        const usedSec = (isEarly || isPractice) ? Math.max(1, Math.round(elapsedMs / 1000)) : GAME_SECONDS;
+        if (!isEarly && !isPractice) remaining = 0;
+        clearTarget();
+        renderHUD();
 
-  document.querySelectorAll('#pHistory .mode-tab').forEach(btn => {
-    btn.addEventListener('click', ev => {
-      ev.currentTarget.blur();
-      historyFilter = btn.dataset.hfilter;
-      document.querySelectorAll('#pHistory .mode-tab').forEach(b => {
-        b.classList.toggle('active', b === btn);
+        if (isPractice) {
+          $('doneTitle').textContent = '🎯 練習完成!';
+        } else {
+          $('doneTitle').textContent = isEarly ? '提早結束!' : '時間到!';
+        }
+
+        const total = right + wrong;
+        const pr = total ? right / total * 100 : 0;
+        const pw = total ? wrong / total * 100 : 0;
+        $('rScore').textContent = score;
+        $('rRight').textContent = right;
+        $('rWrong').textContent = wrong;
+        $('rTotal').textContent = total;
+        $('barG').style.width = '0'; $('barR').style.width = '0';
+        $('pctG').textContent = total ? `對 ${pr.toFixed(1)}%` : '對 —';
+        $('pctR').textContent = total ? `錯 ${pw.toFixed(1)}%` : '錯 —';
+        const perMin = (right / usedSec * 60).toFixed(1);
+        const top = Object.entries(missed).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        let extra = `練習時間 <b style="color:#fff">${usedSec}</b> 秒 · 平均每分鐘打對 <b style="color:#fff">${perMin}</b> 個`;
+        if (top.length) {
+          const chips = top.map(([s, n]) => {
+            const box = el('span', 'missed-sym'); renderSym(s, box);
+            return `${box.outerHTML}<small>×${n}</small>`;
+          }).join(' ');
+          extra += `<br>最常打錯:${chips}`;
+        }
+        $('rExtra').innerHTML = extra;
+        $('rComment').textContent =
+          !total ? '這次沒有按任何鍵喔,再試一次吧!' :
+            pr >= 95 ? '太厲害了,你已經是快打高手!' :
+              pr >= 85 ? '不錯喔!再練幾次會更穩。' :
+                pr >= 70 ? '繼續加油,多留意手指的分工。' :
+                  '別急,先看清楚手指位置,慢慢打也沒關係。';
+
+        if (isPractice) {
+          // 練習模式：不寫入歷史紀錄 Local Storage，且不顯示歷史紀錄按鈕
+          $('doneNote').className = 'done-note practice';
+          $('doneNote').innerHTML = '🌱 <b>練習模式</b>：本次數據僅供檢視，未儲存至歷史紀錄。';
+          $('historyFromDoneBtn').style.display = 'none';
+        } else {
+          // 競賽模式：寫入歷史紀錄 Local Storage，並顯示歷史紀錄按鈕
+          saveRecord({
+            ts: Date.now(),
+            mode: currentMode,
+            score,
+            right,
+            wrong,
+            total,
+            accuracy: Number(pr.toFixed(1)),
+            perMin: Number(perMin),
+            duration: usedSec,
+            early: Boolean(isEarly),
+            topMissed: top
+          });
+          $('doneNote').className = 'done-note competition';
+          $('doneNote').innerHTML = '🏆 <b>競賽模式</b>：成績已成功儲存至歷史紀錄！';
+          $('historyFromDoneBtn').style.display = '';
+        }
+
+        sfx.done();
+        showPanel('done');
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          $('barG').style.width = pr + '%'; $('barR').style.width = pw + '%';
+        }));
+      }
+
+      function handleKey(code) {
+        const sym = MODES[currentMode].code2sym[code];
+        if (sym === target) {
+          right++; score += SCORE_RIGHT; strikes = 0;
+          flashKey(code, 'ok'); sfx.ok();
+          animate(orb, 'ok'); animate(scoreEl, 'bump');
+          floatText(`+${SCORE_RIGHT}`, 'plus');
+          nextTarget();
+          renderHUD();
+        } else {
+          wrong++; score -= SCORE_WRONG;
+          if (playMode === 'competition') {
+            strikes++;
+          }
+          missed[target] = (missed[target] || 0) + 1;
+          flashKey(code, 'bad'); sfx.bad();
+          animate(orb, 'shake');
+          floatText(`−${SCORE_WRONG}`, 'minus');
+          renderHUD();
+          if (playMode === 'competition' && strikes >= STRIKE_LIMIT) enterWarn();
+        }
+      }
+
+      /* ===== 計時(僅在 playing 時計算時間;警告暫停時不計) ===== */
+      setInterval(() => {
+        const now = performance.now();
+        const dt = now - lastTick; lastTick = now;
+        if (state !== 'playing') return;
+        elapsedMs += dt;
+        if (playMode === 'competition') {
+          remaining = GAME_SECONDS - elapsedMs / 1000;
+          if (remaining <= 0) { remaining = 0; finishGame(); return; }
+        }
+        renderHUD();
+      }, 100);
+
+      /* ===== 事件 ===== */
+      window.addEventListener('keydown', e => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (state !== 'playing') {
+          if (e.code === 'Space' || e.code === 'Enter') e.preventDefault();  // 避免用鍵盤觸發按鈕,須用滑鼠點擊
+          return;
+        }
+        if (!MODES[currentMode].code2sym[e.code]) return;
+        e.preventDefault();
+        if (e.repeat) return;
+        handleKey(e.code);
+      }, true);
+      window.addEventListener('keyup', e => {
+        if (state !== 'playing' && (e.code === 'Space' || e.code === 'Enter')) e.preventDefault();
+      }, true);
+
+      const press = (id, fn) => $(id).addEventListener('click', ev => { ev.currentTarget.blur(); fn(); });
+      press('startBtn', startGame);
+      press('resumeBtn', resumeGame);
+      press('againBtn', toReady);
+      press('restartBtn', toReady);
+      press('earlyFinishBtn', () => { if (state === 'playing' || state === 'warn') finishGame(true); });
+      press('warnEarlyFinishBtn', () => finishGame(true));
+      press('historyFromReadyBtn', () => openHistory('ready'));
+      press('historyFromDoneBtn', () => openHistory('done'));
+      press('historyBackBtn', closeHistory);
+      press('clearHistoryBtn', () => {
+        if (confirm('確定要清除所有歷史紀錄嗎？')) clearHistory();
       });
-      renderHistory();
-    });
-  });
 
-  $('showAllBtn').addEventListener('click', ev => {
-    const on = ev.currentTarget.getAttribute('aria-pressed') !== 'true';
-    ev.currentTarget.setAttribute('aria-pressed', on);
-    keyboard.classList.toggle('show-all', on);
-    ev.currentTarget.blur();
-  });
-  $('soundBtn').addEventListener('click', ev => {
-    soundOn = ev.currentTarget.getAttribute('aria-pressed') !== 'true';
-    ev.currentTarget.setAttribute('aria-pressed', soundOn);
-    ev.currentTarget.blur();
-  });
+      document.querySelectorAll('#pReady .mode-tab').forEach(btn => {
+        btn.addEventListener('click', ev => {
+          ev.currentTarget.blur();
+          setMode(btn.dataset.mode);
+        });
+      });
 
-  setMode('zhuyin');
-  toReady();
-})();
-</script>
+      document.querySelectorAll('.play-mode-opt').forEach(btn => {
+        btn.addEventListener('click', ev => {
+          ev.currentTarget.blur();
+          setPlayMode(btn.dataset.playmode);
+        });
+      });
+
+      document.querySelectorAll('#pHistory .mode-tab').forEach(btn => {
+        btn.addEventListener('click', ev => {
+          ev.currentTarget.blur();
+          historyFilter = btn.dataset.hfilter;
+          document.querySelectorAll('#pHistory .mode-tab').forEach(b => {
+            b.classList.toggle('active', b === btn);
+          });
+          renderHistory();
+        });
+      });
+
+      ['showAllBtn', 'readyShowAllBtn'].forEach(id => {
+        const btn = $(id);
+        if (btn) {
+          btn.addEventListener('click', ev => {
+            setShowAll(!showAll);
+            ev.currentTarget.blur();
+          });
+        }
+      });
+
+      ['soundBtn', 'readySoundBtn'].forEach(id => {
+        const btn = $(id);
+        if (btn) {
+          btn.addEventListener('click', ev => {
+            setSound(!soundOn);
+            ev.currentTarget.blur();
+          });
+        }
+      });
+
+      setMode('zhuyin');
+      updatePlayModeUI();
+      setShowAll(showAll);
+      setSound(soundOn);
+      toReady();
+    })();
+  </script>
 </body>
+
 </html>
